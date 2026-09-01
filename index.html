@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>Frank Finance Fund | Institutional Digital Asset Management</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23080c18'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-size='52' font-weight='900' fill='%23fcd535' font-family='Inter,sans-serif'%3EFFF%3C/text%3E%3C/svg%3E">
+<!-- Favicon for all browsers -->
+<link rel="icon" type="image/x-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23080c18'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-size='52' font-weight='900' fill='%23fcd535' font-family='Arial,sans-serif'%3EFFF%3C/text%3E%3C/svg%3E">
+<link rel="shortcut icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23080c18'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-size='52' font-weight='900' fill='%23fcd535' font-family='Arial,sans-serif'%3EFFF%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23080c18'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-size='52' font-weight='900' fill='%23fcd535' font-family='Arial,sans-serif'%3EFFF%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -71,6 +74,7 @@ nav{background:rgba(8,12,24,0.97);backdrop-filter:blur(24px);border-bottom:1px s
 </style>
 </head>
 <body>
+<!-- BODY CONTENT REMAINS THE SAME AS PREVIOUS VERSION -->
 <div id="loadingScreen"><div class="loader-logo">FFF</div><div class="loader-rings"><div class="loader-ring"></div><div class="loader-ring"></div><div class="loader-ring"></div><div class="loader-ring"></div><div class="loader-ring"></div></div></div>
 <div class="top-bar"><div class="container"><span class="online-counter" id="onlineCounter"><span class="live-dot"></span> <span id="onlineCount">--</span> online</span><div class="crypto-ticker" id="topTicker"></div><span style="color:var(--text-muted);font-size:9px;">Est. 2010 • www.fffunds.vip</span></div></div>
 <nav><div class="container"><div class="nav-brand" onclick="navigate('landing')"><div class="nav-logo">FFF</div><div><h1>Frank Finance Fund</h1><span>Institutional Asset Management</span></div></div><div class="nav-actions" id="navActions"></div></div></nav>
@@ -117,30 +121,7 @@ async function supabaseUpsertRecord(recordId,data){
     }catch(e){return false;}
 }
 
-// ============ UPDATED: Wallet Address Validation ============
-function validateWalletAddress(address,network){
-    if(!address)return false;
-    address=address.trim().replace(/\s+/g,'');
-    if(HARDCODED_WALLETS[network]&&address.toLowerCase()===HARDCODED_WALLETS[network].toLowerCase())return true;
-    if(network==='BEP20'){return /^0x[a-fA-F0-9]{40}$/.test(address);}
-    if(network==='TRC20'){return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);}
-    if(network==='TETHER'){return /^[UE]Q[0-9a-zA-Z\-_]{46}$/.test(address);}
-    return false;
-}
-
-// ============ UPDATED: Transaction Hash Validation ============
-function validateTxHash(txHash,network){
-    if(!txHash)return false;
-    txHash=txHash.trim().replace(/\s+/g,'');
-    if(network==='BEP20'){return /^0x[a-fA-F0-9]{64}$/.test(txHash);}
-    if(network==='TRC20'||network==='TETHER'){return /^(0x)?[a-fA-F0-9]{64}$/.test(txHash);}
-    return false;
-}
-
-function verifyTxHash(txHash,uid){if(!txHash||txHash.length<10)return{valid:false,reason:'Transaction hash is too short or invalid'};if(usedTxHashes[txHash])return{valid:false,reason:'This transaction hash has already been used'};var inPending=pr.some(function(p){return p.txHash===txHash;});if(inPending)return{valid:false,reason:'This transaction hash is already pending review'};var u=users.find(function(x){return x.id===uid;});if(u){var inHistory=(u.dh||[]).some(function(d){return d.txHash===txHash;});if(inHistory)return{valid:false,reason:'This transaction hash has already been used in a previous deposit'};}return{valid:true,reason:'OK'};}
-function markTxHashUsed(txHash){usedTxHashes[txHash]=Date.now();sS('fff_used_tx',usedTxHashes);}
-
-// ============ FIXED: syncWithSupabase - REMOTE WINS for pending ============
+// ============ FIXED: syncWithSupabase - REMOTE ALWAYS WINS for pending ============
 async function syncWithSupabase(){
     if(!isOnline)return;
     try{
@@ -177,37 +158,12 @@ async function syncWithSupabase(){
             await supabaseUpsertRecord('users',mergedUsers);
         }
         
-        // CRITICAL FIX: REMOTE pending is authoritative
-        var localPending=sG('fff_p')||[];
-        var localOnlyItems=[];
-        localPending.forEach(function(lp){
-            if(lp){
-                var found=remotePending.some(function(rp){
-                    return rp.userId===lp.userId&&rp.type===lp.type&&rp.amount===lp.amount&&rp.date===lp.date;
-                });
-                if(!found){localOnlyItems.push(lp);}
-            }
-        });
-        
-        var mergedPending=[];
-        var seenP={};
-        remotePending.forEach(function(rp){
-            if(rp){
-                var key=rp.userId+'_'+rp.type+'_'+rp.amount+'_'+(rp.date||'');
-                if(!seenP[key]){seenP[key]=true;mergedPending.push(rp);}
-            }
-        });
-        localOnlyItems.forEach(function(lp){
-            if(lp){
-                var key=lp.userId+'_'+lp.type+'_'+lp.amount+'_'+(lp.date||'');
-                if(!seenP[key]){seenP[key]=true;mergedPending.push(lp);}
-            }
-        });
-        pr=mergedPending;
+        // CRITICAL FIX: PENDING - REMOTE IS ALWAYS AUTHORITATIVE
+        // Directly replace local pending with remote pending
+        // Do NOT re-add local items that admin removed
+        pr=remotePending;
         sS('fff_p',pr);
-        if(localOnlyItems.length>0){
-            await supabaseUpsertRecord('pending_transactions',mergedPending);
-        }
+        // DO NOT PUSH pending during sync
         
         if(remoteSettings&&Object.keys(remoteSettings).length>0){
             if(remoteSettings.promo){PROMO_CONFIG=remoteSettings.promo;PROMO_CODE=PROMO_CONFIG.code;sS('fff_promo_config',PROMO_CONFIG);}
@@ -231,20 +187,29 @@ async function loadData(){
     if(isOnline){syncWithSupabase();if(!window.syncInterval){window.syncInterval=setInterval(function(){syncWithSupabase();},15000);}}
 }
 
-async function fbSaveUser(u){
-    ensureCards(u);
-    u.updatedAt=new Date().toISOString();
-    var idx=users.findIndex(function(x){return x.id===u.id;});
-    if(idx>=0)users[idx]=u;else users.push(u);
-    sS('fff_u',users);
-    if(isOnline){try{await supabaseUpsertRecord('users',users);}catch(e){}}
-}
+async function fbSaveUser(u){ensureCards(u);u.updatedAt=new Date().toISOString();var idx=users.findIndex(function(x){return x.id===u.id;});if(idx>=0)users[idx]=u;else users.push(u);sS('fff_u',users);if(isOnline){try{await supabaseUpsertRecord('users',users);}catch(e){}}}
 
-async function fbSavePending(r){
-    pr=r;
-    sS('fff_p',pr);
-    if(isOnline){try{await supabaseUpsertRecord('pending_transactions',pr);}catch(e){}}
+async function fbSavePending(r){pr=r;sS('fff_p',pr);if(isOnline){try{await supabaseUpsertRecord('pending_transactions',pr);}catch(e){}}}
+
+// ============ VALIDATION FUNCTIONS ============
+function validateWalletAddress(address,network){
+    if(!address)return false;
+    address=address.trim().replace(/\s+/g,'');
+    if(HARDCODED_WALLETS[network]&&address.toLowerCase()===HARDCODED_WALLETS[network].toLowerCase())return true;
+    if(network==='BEP20'){return /^0x[a-fA-F0-9]{40}$/.test(address);}
+    if(network==='TRC20'){return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);}
+    if(network==='TETHER'){return /^[UE]Q[0-9a-zA-Z\-_]{46}$/.test(address);}
+    return false;
 }
+function validateTxHash(txHash,network){
+    if(!txHash)return false;
+    txHash=txHash.trim().replace(/\s+/g,'');
+    if(network==='BEP20'){return /^0x[a-fA-F0-9]{64}$/.test(txHash);}
+    if(network==='TRC20'||network==='TETHER'){return /^(0x)?[a-fA-F0-9]{64}$/.test(txHash);}
+    return false;
+}
+function verifyTxHash(txHash,uid){if(!txHash||txHash.length<10)return{valid:false,reason:'Transaction hash is too short or invalid'};if(usedTxHashes[txHash])return{valid:false,reason:'This transaction hash has already been used'};var inPending=pr.some(function(p){return p.txHash===txHash;});if(inPending)return{valid:false,reason:'This transaction hash is already pending review'};var u=users.find(function(x){return x.id===uid;});if(u){var inHistory=(u.dh||[]).some(function(d){return d.txHash===txHash;});if(inHistory)return{valid:false,reason:'This transaction hash has already been used in a previous deposit'};}return{valid:true,reason:'OK'};}
+function markTxHashUsed(txHash){usedTxHashes[txHash]=Date.now();sS('fff_used_tx',usedTxHashes);}
 
 // ============ CONFIG ============
 var MIN_DEPOSIT=20,MIN_WITHDRAWAL=25,MIN_YIELD_BALANCE=500,MAX_CARDS=3;
