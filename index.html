@@ -148,6 +148,10 @@
   .coin-fiat { font-size:clamp(.82rem,2vw,.95rem); font-weight:900; color:var(--green-2); margin-top:6px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
   .coin-rate { font-size:.68rem; color:var(--text-3); margin-top:8px; font-family:'JetBrains Mono',monospace; font-weight:600; }
   .coin-active-tag { margin-top:8px; font-size:.68rem; color:var(--orange-2); font-weight:800; display:flex; align-items:center; gap:6px; }
+  .coin-verify-tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:6px; }
+  .coin-verify-tag { font-size:.58rem; font-weight:800; padding:2px 7px; border-radius:20px; display:inline-flex; align-items:center; gap:3px; }
+  .coin-verify-tag.email { background:rgba(86,168,255,.15); color:var(--blue-2); border:1px solid rgba(86,168,255,.35); }
+  .coin-verify-tag.wallet { background:rgba(46,229,107,.15); color:var(--green-2); border:1px solid rgba(46,229,107,.35); }
   .total-assets-card { background:linear-gradient(135deg,rgba(255,159,46,.12),rgba(182,114,255,.08),rgba(46,229,107,.06)); border:1.5px solid rgba(255,159,46,.4); border-radius:22px; padding:clamp(16px,3vw,22px); margin-bottom:16px; position:relative; overflow:hidden; }
   .total-assets-card::before { content:''; position:absolute; top:-50%; right:-20%; width:60%; height:200%; background:radial-gradient(circle,rgba(255,159,46,.25),transparent 60%); filter:blur(50px); pointer-events:none; }
   .total-assets-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; position:relative; z-index:1; }
@@ -659,7 +663,7 @@
       <div class="step-item"><div class="step-num">3</div><div class="step-text"><h4>Claim every hour</h4><p>Free accounts earn $5 worth of coins per hourly claim. We'll notify you the moment it's ready.</p></div></div>
       <div class="step-item"><div class="step-num">4</div><div class="step-text"><h4>Complete quick tasks</h4><p>Solve simple tasks and earn instant coin rewards.</p></div></div>
       <div class="step-item"><div class="step-num">5</div><div class="step-text"><h4>Spin the two wheels</h4><p>Daily Lucky Wheel ($2–$20 + boosts) + Referral Wheel ($25–$60 per referral).</p></div></div>
-      <div class="step-item"><div class="step-num">6</div><div class="step-text"><h4>Request a withdrawal</h4><p>First-time withdrawals require email verification — a code OR a link, both work.</p></div></div>
+      <div class="step-item"><div class="step-num">6</div><div class="step-text"><h4>Request a withdrawal</h4><p>Each coin requires one-time email verification + one-time wallet binding before its first withdrawal.</p></div></div>
       <div class="step-item"><div class="step-num">7</div><div class="step-text"><h4>Bind a wallet</h4><p>Bind a wallet to receive funds. Only that wallet can ever receive funds from your account.</p></div></div>
     </div>
   </div>
@@ -722,9 +726,9 @@
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">2. Referral Program</h3>
       <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">Each referral must be a <strong>genuine new user</strong> on a <strong>different device and network</strong> from the referrer. Self-referrals are automatically detected and rejected. Users may refer unlimited genuine users.</p>
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">3. Wallet Binding</h3>
-      <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">Wallet binding is required before the first withdrawal. Only the bound wallet can receive funds. Changes require admin review.</p>
+      <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">Wallet binding is required before the first withdrawal of each coin. Only the bound wallet can receive funds. Changes require admin review.</p>
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">4. Withdrawals</h3>
-      <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">All withdrawals are subject to admin review and approval before payout. First-time withdrawals require email-based ownership verification.</p>
+      <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">All withdrawals are subject to admin review and approval before payout. First-time withdrawals of each coin require email-based ownership verification.</p>
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">5. Subscriptions</h3>
       <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">All subscription payments are subject to admin verification and approval before activation.</p>
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">6. Fraud &amp; Abuse</h3>
@@ -749,7 +753,6 @@
   const SUPABASE_URL = 'https://kbltbsywdrasdbbzkqfw.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_uVatfnjM_r-Ynt9oxp-Uxg_TiuPOVji';
   const SUPABASE_EDGE = SUPABASE_URL + '/functions/v1';
-  const SITE_URL = 'https://fffunds.vip'; // <-- change to your production URL
   const SESSION_IDLE_MS = 60 * 60 * 1000;
   const SESSION_WARN_MS = 55 * 60 * 1000;
   const WITHDRAW_DRAFT_TTL = 24 * 60 * 60 * 1000;
@@ -783,7 +786,7 @@
   };
 
   // ============================================================
-  // WHEEL PRIZES — $2 to $20 + boosts (per requirements)
+  // WHEEL PRIZES — $2 to $20 + boosts
   // ============================================================
   const WHEEL_PRIZES = [
     { label:'$2',  type:'usd', usdAmount:2,  weight:22, color:'#ff9f2e' },
@@ -866,7 +869,6 @@
   let pendingWithdrawEmail = null;
   let withdrawEmailVerified = false;
   let breakdownOpen = false;
-  let passwordResetMode = false; // true = we're in the "set new password" flow after clicking email link
 
   const $ = function(s) { return document.querySelector(s); };
   const now = function() { return Date.now(); };
@@ -885,6 +887,22 @@
     const domMasked = domName.length <= 2 ? domName[0] + '*' : domName.slice(0, 2) + '*'.repeat(Math.max(2, domName.length - 2));
     return localMasked + '@' + domMasked + tld;
   };
+
+  // ============================================================
+  // PER-COIN VERIFICATION HELPERS
+  // ============================================================
+  function isCoinEmailVerified(sym) {
+    if (!currentUser) return false;
+    const v = currentUser.email_verified_coins || {};
+    return v[sym] === true;
+  }
+  async function markCoinEmailVerified(sym) {
+    if (!currentUser) return;
+    const v = Object.assign({}, currentUser.email_verified_coins || {});
+    v[sym] = true;
+    currentUser.email_verified_coins = v;
+    await persistProfile({ email_verified_coins: v });
+  }
 
   // ============================================================
   // SETTINGS / PLANS
@@ -1082,6 +1100,7 @@
       earnings_breakdown: { mining:0, hourly:0, wheel:0, referral:0, tasks:0, bind:0 },
       last_persist_at: now(),
       mining_active: true,
+      email_verified_coins: {},
     };
     const { data: created, error: createErr } = await supabase.from('profiles').insert(newProfile).select().single();
     if (createErr) throw new Error('Profile creation failed: ' + createErr.message);
@@ -1131,7 +1150,7 @@
   function startPriceLoop() { fetchLivePrices(); if (priceRefreshInterval) clearInterval(priceRefreshInterval); priceRefreshInterval = setInterval(fetchLivePrices, 60000); }
 
   // ============================================================
-  // FINGERPRINT / IP / DEVICE INFO
+  // FINGERPRINT / IP
   // ============================================================
   function getCanvasFingerprint() {
     try {
@@ -1429,10 +1448,9 @@
   }
 
   // ============================================================
-  // PASSWORD RESET (email link → new password)
+  // PASSWORD RESET
   // ============================================================
   function showResetPasswordModal() {
-    passwordResetMode = true;
     const modal = document.getElementById('resetPasswordModal');
     const content = document.getElementById('resetPasswordContent');
     
@@ -1472,7 +1490,6 @@
     errEl.textContent = '';
     
     try {
-      // Redirect back to the SAME page with ?reset=1 — Supabase puts session in URL hash
       const redirectTo = location.origin + location.pathname + '?reset=1';
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) throw error;
@@ -1498,7 +1515,6 @@
     }
   }
 
-  // Set new password (after clicking email link, session already set)
   function showUpdatePasswordModal() {
     const modal = document.getElementById('resetPasswordModal');
     const content = document.getElementById('resetPasswordContent');
@@ -1547,8 +1563,6 @@
       
       toast('Password updated successfully! 🎉', 'success');
       closeResetPassword();
-      
-      // Clean the URL
       try { history.replaceState(null, '', location.pathname); } catch (e) {}
       
       const { data: { session } } = await supabase.auth.getSession();
@@ -1567,20 +1581,17 @@
 
   function closeResetPassword() {
     document.getElementById('resetPasswordModal').classList.add('hidden');
-    passwordResetMode = false;
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
   }
 
   // ============================================================
-  // WITHDRAWAL EMAIL VERIFICATION (first-time withdrawal only)
-  // Code OR magic link → on success, redirects to wallet bind page
+  // WITHDRAWAL EMAIL VERIFICATION (per-coin, first-time)
   // ============================================================
   function showWithdrawEmailModal(sym) {
     const modal = document.getElementById('withdrawEmailModal');
     const content = document.getElementById('withdrawEmailContent');
     const email = currentUser.email;
     const code = gen6Digit();
-    // Build a verification link that this app can accept (same origin)
     const verifyToken = btoa(JSON.stringify({ u: currentUser.id, s: sym, c: code, t: now() })).replace(/=+$/,'');
     const verifyLink = location.origin + location.pathname + '?wdverify=' + verifyToken;
 
@@ -1591,7 +1602,7 @@
       '<div style="text-align:center;margin-bottom:16px;">' +
         '<div style="width:70px;height:70px;margin:0 auto 14px;border-radius:20px;background:linear-gradient(135deg,#2ee56b,#5cf09a);display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:#04130a;box-shadow:0 0 30px rgba(46,229,107,.6);"><i class="fa-solid fa-shield-halved"></i></div>' +
         '<h2 style="padding:0;">Verify Ownership</h2>' +
-        '<p class="subtitle" style="margin-bottom:0;">Confirm you\'re the account owner before your first withdrawal</p></div>' +
+        '<p class="subtitle" style="margin-bottom:0;">Confirm you\'re the account owner before your first ' + COINS[sym].ticker + ' withdrawal</p></div>' +
       '<div class="info-box"><i class="fa-solid fa-envelope"></i><div>We sent a verification email to <strong style="color:var(--orange-2);">' + escHtml(email) + '</strong>. You can either <strong>click the link</strong> in the email, or <strong>enter the 6-digit code</strong> below.</div></div>' +
       '<div class="form-group"><label>6-digit verification code</label>' +
         '<input type="text" id="withdrawEmailCodeInput" placeholder="000000" maxlength="6" inputmode="numeric" style="text-align:center;font-family:JetBrains Mono,monospace;font-size:1.5rem;letter-spacing:.5em;font-weight:900;padding:16px 14px;" autocomplete="one-time-code"></div>' +
@@ -1602,7 +1613,6 @@
         '<button class="btn btn-ghost btn-sm" onclick="App.resendWithdrawEmail()"><i class="fa-solid fa-rotate"></i> Resend email</button></div>';
     modal.classList.remove('hidden');
 
-    // Send the email (code + link) via the Edge Function
     (async function() {
       try {
         const res = await fetch(SUPABASE_EDGE + '/send-withdraw-code', {
@@ -1649,17 +1659,35 @@
     completeWithdrawEmailVerification(pending.sym);
   }
 
-  function completeWithdrawEmailVerification(sym) {
+  async function completeWithdrawEmailVerification(sym) {
     pendingWithdrawEmail = null;
     clearPendingWithdrawEmail();
     withdrawEmailVerified = true;
-    document.getElementById('withdrawEmailModal').classList.add('hidden');
-    toast('Ownership verified! Now bind your wallet to continue.', 'success');
-    // Straight to wallet bind
-    pendingWithdrawalAfterBind = { sym: sym, amount: null, step: 1 };
-    // Pre-create a withdraw context so after bind it continues to amount step
-    withdrawContext = { sym: sym, step: 1 };
-    showBind(sym);
+
+    await markCoinEmailVerified(sym);
+
+    const w = (currentUser.wallets || {})[sym];
+    const walletBound = w && w.bound;
+
+    if (walletBound) {
+      toast('Ownership verified! Review your withdrawal.', 'success');
+      setTimeout(function() {
+        withdrawContext = { sym: sym, step: 3, amount: withdrawContext ? withdrawContext.amount : null };
+        saveWithdrawDraft();
+        document.getElementById('withdrawTitle').innerHTML = '<i class="fa-solid fa-money-bill-transfer" style="color:var(--orange);margin-right:8px;"></i>Withdraw ' + COINS[sym].name;
+        document.getElementById('withdrawSubtitle').textContent = 'Ownership verified — review and confirm';
+        renderWithdrawStep();
+        document.getElementById('withdrawModal').classList.remove('hidden');
+      }, 200);
+    } else {
+      toast('Ownership verified! Now bind your wallet.', 'success');
+      pendingWithdrawalAfterBind = { sym: sym };
+      setTimeout(function() {
+        document.getElementById('withdrawTitle').innerHTML = '<i class="fa-solid fa-money-bill-transfer" style="color:var(--orange);margin-right:8px;"></i>Withdraw ' + COINS[sym].name;
+        document.getElementById('withdrawSubtitle').textContent = 'One last step — verify your wallet';
+        showBind(sym);
+      }, 200);
+    }
   }
 
   async function resendWithdrawEmail() {
@@ -1708,7 +1736,6 @@
     document.getElementById('withdrawEmailModal').classList.add('hidden');
   }
 
-  // Handle ?wdverify=TOKEN in URL — auto-verify and jump to bind
   function tryHandleWithdrawVerifyLink() {
     const params = new URLSearchParams(location.search);
     const token = params.get('wdverify');
@@ -1716,21 +1743,17 @@
     try {
       const decoded = JSON.parse(atob(token));
       if (!decoded || !decoded.u || !decoded.s || !decoded.c) return false;
-      // Ensure this is for the current user
       if (!currentUser || currentUser.id !== decoded.u) {
         toast('Verification link does not match the signed-in account.', 'warn');
         return false;
       }
-      // Fetch pending and verify
       const pending = pendingWithdrawEmail || loadPendingWithdrawEmail();
       if (!pending || pending.code !== decoded.c || pending.sym !== decoded.s) {
         toast('Verification link expired or invalid. Please request a new one.', 'warn');
-        // Clean URL and reopen the modal
         try { history.replaceState(null, '', location.pathname); } catch (e) {}
         showWithdrawEmailModal(decoded.s);
         return true;
       }
-      // Success!
       try { history.replaceState(null, '', location.pathname); } catch (e) {}
       completeWithdrawEmailVerification(decoded.s);
       return true;
@@ -1970,81 +1993,144 @@
   }
 
   // ============================================================
-  // MINING LOOP — Always accrues until user pauses (online + offline)
+  // MINING — always accrues online/offline until paused
   // ============================================================
-  function startMiningLoop() {
-    stopMiningLoop(); if (!currentUser) return;
-    hourlyWasReady = false;
+  let _lastMiningTick = now();
+  let _tickRunning = false;
 
-    // Offline catch-up: gap since last_persist_at
-    if (currentUser.mining_active && currentUser.last_persist_at) {
-      const lastPersist = typeof currentUser.last_persist_at === 'number'
-        ? currentUser.last_persist_at
-        : new Date(currentUser.last_persist_at).getTime();
-      const gapSec = Math.max(0, (now() - lastPersist) / 1000);
-      if (gapSec > 5) {
-        const maxGapSec = 7 * 24 * 3600;
-        const effectiveGap = Math.min(gapSec, maxGapSec);
-        const mult = getEffectiveMultiplier(currentUser);
-        const streakBonus = 1 + Math.min((currentUser.login_streak || 1) * 0.05, 0.25);
-        let minedUsdThisGap = 0;
-        Object.keys(COINS).forEach(function(sym) {
-          const coin = COINS[sym];
-          const activeMult = sym === currentUser.active_coin ? 1 : 0.25;
-          const earned = coin.ratePerSec * effectiveGap * activeMult * mult * streakBonus;
-          if (!currentUser.balances) currentUser.balances = {};
-          currentUser.balances[sym] = (currentUser.balances[sym] || 0) + earned;
-          currentUser.total_mined = (currentUser.total_mined || 0) + earned;
-          minedUsdThisGap += coinToUsd(sym, earned);
-        });
-        currentUser.earnings_breakdown = addToEarnings(currentUser.earnings_breakdown, 'mining', minedUsdThisGap);
-        currentUser.session_seconds = (currentUser.session_seconds || 0) + effectiveGap;
-        persistProfile({
-          balances: currentUser.balances,
-          total_mined: currentUser.total_mined,
-          earnings_breakdown: currentUser.earnings_breakdown,
-          session_seconds: currentUser.session_seconds,
-          last_persist_at: now(),
-        });
+  function creditMiningForSeconds(seconds) {
+    if (!currentUser || !currentUser.mining_active) return 0;
+    if (!seconds || seconds <= 0) return 0;
+    const cap = 7 * 24 * 3600;
+    const effectiveGap = Math.min(seconds, cap);
+    const mult = getEffectiveMultiplier(currentUser);
+    const streakBonus = 1 + Math.min((currentUser.login_streak || 1) * 0.05, 0.25);
+    if (!currentUser.balances) currentUser.balances = {};
+    let minedUsd = 0;
+    Object.keys(COINS).forEach(function(sym) {
+      const coin = COINS[sym];
+      const activeMult = sym === currentUser.active_coin ? 1 : 0.25;
+      const earned = coin.ratePerSec * effectiveGap * activeMult * mult * streakBonus;
+      currentUser.balances[sym] = (currentUser.balances[sym] || 0) + earned;
+      currentUser.total_mined = (currentUser.total_mined || 0) + earned;
+      minedUsd += coinToUsd(sym, earned);
+    });
+    currentUser.earnings_breakdown = addToEarnings(currentUser.earnings_breakdown, 'mining', minedUsd);
+    currentUser.session_seconds = (currentUser.session_seconds || 0) + effectiveGap;
+    return effectiveGap;
+  }
+
+  async function flushMiningNow(reason) {
+    if (!currentUser || !currentUser.id) return;
+    try {
+      // Credit any time since the last live tick that wasn't yet counted.
+      // (This handles background-throttled tabs where setInterval stalled.)
+      if (_tickRunning) {
+        const elapsed = (now() - _lastMiningTick) / 1000;
+        if (elapsed > 0.5) {
+          creditMiningForSeconds(elapsed);
+          _lastMiningTick = now();
+        }
       }
-    }
-
-    // Live tick
-    let lastTick = now();
-    miningInterval = setInterval(function() {
-      if (!currentUser) { lastTick = now(); return; }
-      if (!currentUser.mining_active) { lastTick = now(); return; }
-      const elapsedSec = Math.min((now() - lastTick) / 1000, 60);
-      lastTick = now();
-      if (!currentUser.balances) currentUser.balances = {};
-      const mult = getEffectiveMultiplier(currentUser);
-      const streakBonus = 1 + Math.min((currentUser.login_streak || 1) * 0.05, 0.25);
-      let minedUsdThisTick = 0;
-      Object.keys(COINS).forEach(function(sym) {
-        const coin = COINS[sym];
-        const activeMult = sym === currentUser.active_coin ? 1 : 0.25;
-        const earned = coin.ratePerSec * elapsedSec * activeMult * mult * streakBonus;
-        currentUser.balances[sym] = (currentUser.balances[sym] || 0) + earned;
-        currentUser.total_mined = (currentUser.total_mined || 0) + earned;
-        minedUsdThisTick += coinToUsd(sym, earned);
-      });
-      currentUser.session_seconds = (currentUser.session_seconds || 0) + elapsedSec;
-      currentUser.earnings_breakdown = addToEarnings(currentUser.earnings_breakdown, 'mining', minedUsdThisTick);
-      updateLiveNumbers();
-    }, 1000);
-
-    // Persist every 15s so offline gap is small
-    persistInterval = setInterval(function() {
-      if (!currentUser) return;
       currentUser.last_persist_at = now();
-      persistProfile({
+      await persistProfile({
         balances: currentUser.balances,
         total_mined: currentUser.total_mined,
         session_seconds: currentUser.session_seconds,
         earnings_breakdown: currentUser.earnings_breakdown,
         last_persist_at: currentUser.last_persist_at,
       });
-    }, 15000);
+    } catch (e) { /* best effort */ }
+  }
+
+  async function reconcileMiningGap() {
+    if (!currentUser || !currentUser.mining_active || !currentUser.last_persist_at) return;
+    const lastPersist = typeof currentUser.last_persist_at === 'number'
+      ? currentUser.last_persist_at
+      : new Date(currentUser.last_persist_at).getTime();
+    const gapSec = Math.max(0, (now() - lastPersist) / 1000);
+    if (gapSec <= 5) { _lastMiningTick = now(); return; }
+
+    const credited = creditMiningForSeconds(gapSec);
+    currentUser.last_persist_at = now();
+    _lastMiningTick = now();
+
+    await persistProfile({
+      balances: currentUser.balances,
+      total_mined: currentUser.total_mined,
+      session_seconds: currentUser.session_seconds,
+      earnings_breakdown: currentUser.earnings_breakdown,
+      last_persist_at: currentUser.last_persist_at,
+    });
+
+    if (credited > 30) {
+      toast('⛏️ Credited mining for ' + Math.round(credited) + 's away', 'info');
+    }
+    updateLiveNumbers();
+    renderTotalAssets();
+  }
+
+  function startMiningLoop() {
+    stopMiningLoop(); if (!currentUser) return;
+    hourlyWasReady = false;
+
+    // Bind unload / visibility flush once per page load
+    if (!window._ffFlushBound) {
+      window._ffFlushBound = true;
+      window.addEventListener('beforeunload', function () { flushMiningNow('beforeunload'); });
+      window.addEventListener('pagehide', function () { flushMiningNow('pagehide'); });
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') {
+          flushMiningNow('hidden');
+        } else {
+          reconcileMiningGap();
+        }
+      });
+    }
+
+    // ---- OFFLINE CATCH-UP (runs once, awaits before live tick starts) ----
+    (async function offlineCatchUp() {
+      if (!currentUser || !currentUser.mining_active || !currentUser.last_persist_at) {
+        _lastMiningTick = now();
+        return;
+      }
+      const lastPersist = typeof currentUser.last_persist_at === 'number'
+        ? currentUser.last_persist_at
+        : new Date(currentUser.last_persist_at).getTime();
+      const gapSec = Math.max(0, (now() - lastPersist) / 1000);
+
+      if (gapSec <= 5) { _lastMiningTick = now(); return; }
+
+      creditMiningForSeconds(gapSec);
+      currentUser.last_persist_at = now();
+      _lastMiningTick = now();
+
+      await persistProfile({
+        balances: currentUser.balances,
+        total_mined: currentUser.total_mined,
+        earnings_breakdown: currentUser.earnings_breakdown,
+        session_seconds: currentUser.session_seconds,
+        last_persist_at: currentUser.last_persist_at,
+      });
+
+      updateLiveNumbers();
+      renderTotalAssets();
+      if (gapSec > 60) toast('⛏️ Welcome back — credited ' + Math.round(gapSec) + 's of mining', 'success');
+    })();
+
+    // ---- LIVE TICK ----
+    _tickRunning = true;
+    miningInterval = setInterval(function() {
+      if (!currentUser) { _lastMiningTick = now(); return; }
+      if (!currentUser.mining_active) { _lastMiningTick = now(); return; }
+      const elapsedSec = Math.min((now() - _lastMiningTick) / 1000, 60);
+      _lastMiningTick = now();
+      if (elapsedSec <= 0) return;
+      creditMiningForSeconds(elapsedSec);
+      updateLiveNumbers();
+    }, 1000);
+
+    persistInterval = setInterval(function() { flushMiningNow('interval'); }, 15000);
 
     sessionTimerInterval = setInterval(function() {
       if (!currentUser) return;
@@ -2064,6 +2150,7 @@
   }
 
   function stopMiningLoop() {
+    _tickRunning = false;
     if (miningInterval) { clearInterval(miningInterval); miningInterval = null; }
     if (sessionTimerInterval) { clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
     if (hourlyTickInterval) { clearInterval(hourlyTickInterval); hourlyTickInterval = null; }
@@ -2123,10 +2210,12 @@
   }
   ['mousemove','keydown','click','touchstart','scroll'].forEach(function(evt) { document.addEventListener(evt, function() { resetIdleTimer(); }, { passive: true }); });
 
-  function enterDashboard() {
+  async function enterDashboard() {
     document.getElementById('view-home').classList.add('hidden');
     document.getElementById('view-dashboard').classList.remove('hidden');
-    renderNav(); renderDashboard(); startMiningLoop(); startPriceLoop(); resetIdleTimer();
+    renderNav(); renderDashboard();
+    await reconcileMiningGap().catch(function(){});
+    startMiningLoop(); startPriceLoop(); resetIdleTimer();
     window.scrollTo({ top:0, behavior:'smooth' });
   }
   function navigate() { if (!currentUser) { showAuth('login'); return; } enterDashboard(); }
@@ -2352,6 +2441,15 @@
       const active = currentUser.active_coin === sym; const usdVal = coinToUsd(sym, bal);
       const boostedRate = c.ratePerSec * plan.multiplier; const sym_ = currencySymbol();
       const localVal = (usdVal * (CURRENCIES[(currentUser.currency||'USD')] || CURRENCIES.USD).rate).toFixed(2);
+      const emailVerified = isCoinEmailVerified(sym);
+      const walletBound = (currentUser.wallets && currentUser.wallets[sym] && currentUser.wallets[sym].bound);
+      let verifyTags = '';
+      if (emailVerified || walletBound) {
+        verifyTags = '<div class="coin-verify-tags">';
+        if (emailVerified) verifyTags += '<span class="coin-verify-tag email"><i class="fa-solid fa-envelope-circle-check"></i> Email</span>';
+        if (walletBound) verifyTags += '<span class="coin-verify-tag wallet"><i class="fa-solid fa-wallet"></i> Wallet</span>';
+        verifyTags += '</div>';
+      }
       return '<div class="coin-card ' + (active?'selected':'') + '">' +
         '<div class="coin-head" onclick="event.stopPropagation();App.setActiveCoin(\'' + sym + '\')">' +
           '<div class="coin-id"><div class="coin-icon ' + c.colorClass + '">' + c.icon + '</div>' +
@@ -2361,6 +2459,7 @@
         '<div class="coin-fiat" id="usd_' + sym + '">' + sym_ + localVal + '</div>' +
         '<div class="coin-rate">' + boostedRate.toFixed(8) + ' ' + c.ticker + '/s</div>' +
         (active ? '<div class="coin-active-tag"><i class="fa-solid fa-circle-check"></i> Active</div>' : '') +
+        verifyTags +
         '<button class="btn btn-outline btn-sm btn-block" style="margin-top:10px;" onclick="event.stopPropagation();App.startWithdrawal(\'' + sym + '\')">' +
           '<i class="fa-solid fa-arrow-up"></i> Withdraw ' + c.ticker + '</button></div>';
     }).join('');
@@ -2441,7 +2540,7 @@
   }
 
   // ============================================================
-  // WITHDRAWAL FLOW — first-time = email verify, then bind wallet, then withdraw
+  // WITHDRAWAL FLOW — amount → per-coin email verify → wallet bind → review → submit
   // ============================================================
   function startWithdrawal(sym) {
     if (!currentUser) return;
@@ -2451,34 +2550,24 @@
     if (!meetsWithdrawalRequirements(currentUser)) { clearWithdrawDraft(); withdrawContext = null; showRequirementsGate(); return; }
 
     withdrawEmailVerified = false;
-    const hasWithdrawnBefore = (currentUser.withdrawals || []).length > 0;
 
-    // First-time only: email verification step
-    if (!hasWithdrawnBefore) {
-      const pending = loadPendingWithdrawEmail();
-      if (pending && pending.sym === sym && pending.code && !pending.verified) {
-        pendingWithdrawEmail = pending;
-        showWithdrawEmailModal(sym);
-        return;
-      }
-      showWithdrawEmailModal(sym);
-      return;
-    }
-
-    // Subsequent withdrawals: skip email verification
-    withdrawEmailVerified = true;
+    // Resume existing draft if same coin and unfinished
     const draft = loadWithdrawDraft();
-    if (draft && draft.sym === sym && draft.step >= 2 && draft.step < 4) {
+    if (draft && draft.sym === sym && draft.step >= 1 && draft.step < 4) {
       withdrawContext = Object.assign({}, draft);
       document.getElementById('withdrawTitle').innerHTML = '<i class="fa-solid fa-money-bill-transfer" style="color:var(--orange);margin-right:8px;"></i>Withdraw ' + COINS[sym].name;
       document.getElementById('withdrawSubtitle').textContent = 'Resuming your withdrawal — no progress lost';
-      renderWithdrawStep(); document.getElementById('withdrawModal').classList.remove('hidden'); return;
+      renderWithdrawStep();
+      document.getElementById('withdrawModal').classList.remove('hidden');
+      return;
     }
+
     clearWithdrawDraft();
     withdrawContext = { sym: sym, step: 1 };
     document.getElementById('withdrawTitle').innerHTML = '<i class="fa-solid fa-money-bill-transfer" style="color:var(--orange);margin-right:8px;"></i>Withdraw ' + COINS[sym].name;
     document.getElementById('withdrawSubtitle').textContent = 'Enter the amount you want to withdraw';
-    renderWithdrawStep(); document.getElementById('withdrawModal').classList.remove('hidden');
+    renderWithdrawStep();
+    document.getElementById('withdrawModal').classList.remove('hidden');
   }
 
   function showRequirementsGate() {
@@ -2651,15 +2740,41 @@
   }
 
   function withdrawNextStep1() {
-    const input = document.getElementById('withdrawAmountInput'); const errEl = document.getElementById('withdrawError');
-    const sym = withdrawContext.sym; const c = COINS[sym];
+    const input = document.getElementById('withdrawAmountInput');
+    const errEl = document.getElementById('withdrawError');
+    const sym = withdrawContext.sym;
+    const c = COINS[sym];
     const bal = (currentUser.balances && currentUser.balances[sym]) || 0;
     const amt = parseFloat(input.value);
     if (isNaN(amt) || amt <= 0) { errEl.textContent = 'Enter a valid amount.'; return; }
     if (amt < c.minWithdraw) { errEl.textContent = 'Minimum withdrawal is ' + c.minWithdraw + ' ' + sym; return; }
     if (amt > bal) { errEl.textContent = 'Amount exceeds your balance of ' + fmtCoin(sym, bal) + ' ' + sym; return; }
     if (amt <= c.withdrawFee) { errEl.textContent = 'Amount must be higher than the network fee.'; return; }
-    withdrawContext.amount = amt; withdrawContext.step = 2; saveWithdrawDraft(); renderWithdrawStep();
+
+    withdrawContext.amount = amt;
+    saveWithdrawDraft();
+
+    // GATE 1: per-coin email verification
+    const coinEmailVerified = isCoinEmailVerified(sym);
+    if (!coinEmailVerified && !withdrawEmailVerified) {
+      document.getElementById('withdrawModal').classList.add('hidden');
+      showWithdrawEmailModal(sym);
+      return;
+    }
+
+    // GATE 2: wallet not bound → bind
+    const w = (currentUser.wallets || {})[sym];
+    if (!w || !w.bound) {
+      withdrawContext.step = 2;
+      saveWithdrawDraft();
+      renderWithdrawStep();
+      return;
+    }
+
+    // Straight to review
+    withdrawContext.step = 3;
+    saveWithdrawDraft();
+    renderWithdrawStep();
   }
   function withdrawNextStep2() { withdrawContext.step = 3; saveWithdrawDraft(); renderWithdrawStep(); }
   function withdrawBack() { if (!withdrawContext) return; withdrawContext.step = Math.max(1, withdrawContext.step - 1); saveWithdrawDraft(); renderWithdrawStep(); }
@@ -2897,20 +3012,23 @@
     playRewardSound();
     closeBind();
 
-    // If this bind came from a first-time withdrawal flow, continue to amount step
+    // Resume withdrawal at review step after bind
     if (pendingWithdrawalAfterBind && pendingWithdrawalAfterBind.sym === sym) {
       const pw = pendingWithdrawalAfterBind; pendingWithdrawalAfterBind = null;
       setTimeout(function() {
-        withdrawContext = { sym: pw.sym, step: 1 };
+        const savedAmount = withdrawContext ? withdrawContext.amount : null;
+        withdrawContext = { sym: pw.sym, step: 3, amount: savedAmount };
         saveWithdrawDraft();
         document.getElementById('withdrawTitle').innerHTML = '<i class="fa-solid fa-money-bill-transfer" style="color:var(--orange);margin-right:8px;"></i>Withdraw ' + COINS[pw.sym].name;
-        document.getElementById('withdrawSubtitle').textContent = 'Wallet verified! Now choose your withdrawal amount';
-        renderWithdrawStep(); document.getElementById('withdrawModal').classList.remove('hidden');
+        document.getElementById('withdrawSubtitle').textContent = 'Wallet verified! Review and confirm your withdrawal';
+        renderWithdrawStep();
+        document.getElementById('withdrawModal').classList.remove('hidden');
       }, 400);
     } else if (withdrawContext && withdrawContext.sym === sym && withdrawContext.step === 2) {
-      // Resume from bind within regular withdrawal flow
       setTimeout(function() { renderWithdrawStep(); document.getElementById('withdrawModal').classList.remove('hidden'); }, 400);
-    } else { renderDashboard(); }
+    } else {
+      renderDashboard();
+    }
   }
   function renderQRWithLogo(containerId, text, coinSym) {
     const container = document.getElementById(containerId); if (!container || typeof QRCode === 'undefined') return;
@@ -3398,6 +3516,7 @@
     persistProfile({ mining_active: next, last_persist_at: now() });
     currentUser.mining_active = next;
     currentUser.last_persist_at = now();
+    _lastMiningTick = now();
     renderMiningBadge();
     toast(next ? 'Mining resumed' : 'Mining paused', next ? 'success' : 'warn');
   }
@@ -3411,12 +3530,12 @@
   function closeHowItWorks() { document.getElementById('howModal').classList.add('hidden'); }
 
   async function logout() {
+    await flushMiningNow('logout').catch(function(){});
     stopMiningLoop();
     if (priceRefreshInterval) { clearInterval(priceRefreshInterval); priceRefreshInterval = null; }
     if (settingsRefreshInterval) { clearInterval(settingsRefreshInterval); settingsRefreshInterval = null; }
     if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
     if (idleWarnTimer) { clearTimeout(idleWarnTimer); idleWarnTimer = null; }
-    if (currentUser) { try { await persistProfile({ balances: currentUser.balances, total_mined: currentUser.total_mined, session_seconds: currentUser.session_seconds, earnings_breakdown: currentUser.earnings_breakdown, last_persist_at: now() }); } catch(e){} }
     await supabase.auth.signOut();
     currentUser = null;
     document.getElementById('view-dashboard').classList.add('hidden');
@@ -3448,12 +3567,10 @@
     const pendingWd = loadPendingWithdrawEmail();
     if (pendingWd && pendingWd.code && !pendingWd.verified) { pendingWithdrawEmail = pendingWd; }
 
-    // Detect password reset (URL has ?reset=1 or #type=recovery)
     const urlParams = new URLSearchParams(location.search);
     const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
     const isPasswordReset = urlParams.get('reset') === '1' || hashParams.get('type') === 'recovery';
 
-    // Try session
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session && session.user) {
@@ -3467,26 +3584,26 @@
         if (profile.last_login_date !== today) loginStreak = (profile.last_login_date === yesterKey()) ? loginStreak + 1 : 1;
         let spinsToday = profile.spins_today || 0; let lastSpinDate = profile.last_spin_date || null;
         if (lastSpinDate !== today) { lastSpinDate = today; spinsToday = 0; }
-        const updated = await persistProfile({ device: info, last_device: info, ip: info.ip, last_ip: info.ip, last_login_date: today, login_streak: loginStreak, last_spin_date: lastSpinDate, spins_today: spinsToday, email_verified: !!session.user.email_confirmed_at, last_persist_at: now() });
+        const updated = await persistProfile({ device: info, last_device: info, ip: info.ip, last_ip: info.ip, last_login_date: today, login_streak: loginStreak, last_spin_date: lastSpinDate, spins_today: spinsToday, email_verified: !!session.user.email_confirmed_at });
         currentUser = updated || profile;
         clearPendingConfirm(); pendingConfirmEmail = null;
 
-        // Password reset takes priority: force new password screen
         if (isPasswordReset) {
           showUpdatePasswordModal();
           return;
         }
 
-        // Handle withdraw verify link (if user is signed in and URL has ?wdverify=)
         const handledWdVerify = tryHandleWithdrawVerifyLink();
-        if (handledWdVerify) return;
+        if (handledWdVerify) {
+          enterDashboard();
+          return;
+        }
 
-        enterDashboard();
+        await enterDashboard();
         return;
       }
     } catch (e) { console.warn('init session error:', e); }
 
-    // No session. If password reset link, still show the new password modal — Supabase will set the session from URL hash automatically.
     if (isPasswordReset) {
       setTimeout(function() { showUpdatePasswordModal(); }, 400);
       return;
