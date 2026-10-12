@@ -417,6 +417,35 @@
     .win-splash { animation: none; }
     .confetti { display: none; }
   }
+  .breakdown-toggle-btn {
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .password-wrap {
+    position: relative;
+  }
+  .password-wrap input {
+    padding-right: 48px;
+  }
+  .password-toggle {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-3);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 8px 10px;
+    border-radius: 8px;
+    line-height: 1;
+  }
+  .password-toggle:hover {
+    color: var(--orange);
+    background: rgba(255,159,46,.1);
+  }
 </style>
 </head>
 <body>
@@ -451,7 +480,6 @@
       </div>
     </div>
 
-    <div id="emailVerifyBanner"></div>
     <div id="maintenanceBanner"></div>
     <div id="announcementBanner"></div>
     <div id="dashboardAlert"></div>
@@ -633,6 +661,8 @@
 
 <div class="modal-overlay hidden" id="authModal"><div class="modal"><button class="modal-close" onclick="App.closeAuth()"><i class="fa-solid fa-xmark"></i></button><div id="authContent"></div></div></div>
 <div class="modal-overlay hidden" id="confirmEmailModal"><div class="modal"><button class="modal-close" onclick="App.closeConfirmEmail()"><i class="fa-solid fa-xmark"></i></button><div id="confirmEmailContent"></div></div></div>
+<div class="modal-overlay hidden" id="withdrawEmailModal"><div class="modal"><button class="modal-close" onclick="App.closeWithdrawEmail()"><i class="fa-solid fa-xmark"></i></button><div id="withdrawEmailContent"></div></div></div>
+<div class="modal-overlay hidden" id="resetPasswordModal"><div class="modal"><button class="modal-close" onclick="App.closeResetPassword()"><i class="fa-solid fa-xmark"></i></button><div id="resetPasswordContent"></div></div></div>
 
 <div class="modal-overlay hidden" id="howModal">
   <div class="modal modal-wide">
@@ -710,7 +740,7 @@
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">3. Wallet Binding</h3>
       <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">Wallet binding is required before the first withdrawal. Only the bound wallet can receive funds. Changes require admin review.</p>
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">4. Withdrawals</h3>
-      <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">All withdrawals are subject to admin review and approval before payout.</p>
+      <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">All withdrawals are subject to admin review and approval before payout. First-time withdrawals require email-based ownership verification.</p>
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">5. Subscriptions</h3>
       <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">All subscription payments are subject to admin verification and approval before activation.</p>
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">6. Fraud &amp; Abuse</h3>
@@ -738,6 +768,8 @@
   const SESSION_WARN_MS = 55 * 60 * 1000;
   const WITHDRAW_DRAFT_TTL = 24 * 60 * 60 * 1000;
   const CONFIRM_PENDING_TTL = 60 * 60 * 1000;
+  const WITHDRAW_EMAIL_PENDING_TTL = 30 * 60 * 1000;
+  const RESET_PASSWORD_PENDING_TTL = 60 * 60 * 1000;
 
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
@@ -833,6 +865,10 @@
   let withdrawContext = null;
   let pendingConfirmEmail = null;
   let hourlyWasReady = false;
+  let pendingWithdrawEmail = null;
+  let withdrawEmailVerified = false;
+  let breakdownOpen = false;
+  let pendingResetEmail = null;
 
   const $ = function(s) { return document.querySelector(s); };
   const now = function() { return Date.now(); };
@@ -842,6 +878,7 @@
   const yesterKey = function() { return localDateKey(Date.now() - 86400000); };
   const genRefId = function() { return 'CO-' + Math.random().toString(36).slice(2,6).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase(); };
   const genRefCode = function() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 8; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
+  const gen6Digit = function() { return String(Math.floor(100000 + Math.random() * 900000)); };
   const escHtml = function(s) { return String(s).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
   const maskEmail = function(email) {
     if (!email || email.indexOf('@') === -1) return '***';
@@ -909,6 +946,28 @@
     } catch (e) { return null; }
   }
   function clearPendingConfirm() { try { localStorage.removeItem('fffunds_pending_confirm'); } catch (e) {} }
+
+  function savePendingWithdrawEmail(data) { try { localStorage.setItem('fffunds_pending_wd_email', JSON.stringify(data)); } catch (e) {} }
+  function loadPendingWithdrawEmail() {
+    try {
+      const raw = localStorage.getItem('fffunds_pending_wd_email'); if (!raw) return null;
+      const d = JSON.parse(raw);
+      if (!d || !d.sentAt || (now() - d.sentAt) > WITHDRAW_EMAIL_PENDING_TTL) { localStorage.removeItem('fffunds_pending_wd_email'); return null; }
+      return d;
+    } catch (e) { return null; }
+  }
+  function clearPendingWithdrawEmail() { try { localStorage.removeItem('fffunds_pending_wd_email'); } catch (e) {} }
+
+  function savePendingResetEmail(data) { try { localStorage.setItem('fffunds_pending_reset_email', JSON.stringify(data)); } catch (e) {} }
+  function loadPendingResetEmail() {
+    try {
+      const raw = localStorage.getItem('fffunds_pending_reset_email'); if (!raw) return null;
+      const d = JSON.parse(raw);
+      if (!d || !d.sentAt || (now() - d.sentAt) > RESET_PASSWORD_PENDING_TTL) { localStorage.removeItem('fffunds_pending_reset_email'); return null; }
+      return d;
+    } catch (e) { return null; }
+  }
+  function clearPendingResetEmail() { try { localStorage.removeItem('fffunds_pending_reset_email'); } catch (e) {} }
 
   function detectDevice() {
     const ua = navigator.userAgent;
@@ -1165,13 +1224,12 @@
   }
 
   // ============================================================
-  // PERSISTENT EMAIL CONFIRMATION MODAL
+  // PERSISTENT EMAIL CONFIRMATION MODAL (signup)
   // ============================================================
   function showConfirmEmailModal(email) {
     const modal = document.getElementById('confirmEmailModal'); 
     const content = document.getElementById('confirmEmailContent');
     
-    // If email not passed, restore from localStorage
     if (!email) {
       const saved = loadPendingConfirm();
       if (saved && saved.email) {
@@ -1185,7 +1243,6 @@
       }
     }
     
-    // Save state immediately so reload doesn't lose it
     if (!pendingConfirmEmail) pendingConfirmEmail = { email: email, sentAt: now() };
     else pendingConfirmEmail.email = email;
     savePendingConfirm(email);
@@ -1194,8 +1251,6 @@
     const elapsed = Math.floor((now() - sentAt) / 1000);
     const canResend = elapsed > 60;
     const resendWait = Math.max(0, 60 - elapsed);
-    
-    // Show "progress saved" banner if returning
     const isReturning = elapsed > 10 && elapsed < 300;
     const savedBanner = isReturning 
       ? '<div class="alert alert-success" style="margin-bottom:16px;"><i class="fa-solid fa-floppy-disk"></i><div><strong>Progress saved.</strong> Your confirmation is still waiting. Just paste the code or link below.</div></div>'
@@ -1209,23 +1264,15 @@
       savedBanner +
       '<div class="info-box" style="margin-top:16px;"><i class="fa-solid fa-circle-info"></i>' +
         '<div>Open your email app, look for the email from FFfunds, and either click the link OR copy the 6-digit code below.</div></div>' +
-      
-      // 6-digit code input
       '<div class="form-group"><label>Enter your 6-digit confirmation code</label>' +
         '<input type="text" id="confirmCodeInput" placeholder="000000" maxlength="8" inputmode="numeric" style="text-align:center;font-family:JetBrains Mono,monospace;font-size:1.4rem;letter-spacing:.4em;font-weight:900;padding:16px 14px;" autocomplete="one-time-code"></div>' +
       '<div class="form-error" id="confirmError" style="text-align:center;"></div>' +
-      
-      // Primary action
       '<button class="btn btn-primary btn-block btn-lg" id="btnConfirmEmail" onclick="App.submitConfirmCode()"><i class="fa-solid fa-check"></i> Confirm my account</button>' +
-      
-      // Fallback: paste link
       '<div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);">' +
         '<div style="font-size:.78rem;color:var(--text-3);margin-bottom:8px;font-weight:600;">Link didn\'t work? Copy the URL from your email and paste it here:</div>' +
         '<input type="text" id="confirmLinkInput" placeholder="Paste the confirmation URL" style="width:100%;padding:12px;background:#080c14;border:1px solid var(--border-2);border-radius:10px;color:#fff;font-size:.8rem;margin-bottom:8px;font-family:JetBrains Mono,monospace;">' +
         '<button class="btn btn-ghost btn-sm btn-block" onclick="App.submitConfirmLink()"><i class="fa-solid fa-link"></i> Use confirmation link</button>' +
       '</div>' +
-      
-      // Resend
       '<div style="text-align:center;margin-top:14px;">' +
         '<button class="btn btn-ghost btn-sm" id="btnResendConfirm" onclick="App.resendConfirm()" ' + (canResend ? '' : 'disabled') + '>' +
           '<i class="fa-solid fa-rotate"></i> ' + (canResend ? 'Resend confirmation email' : 'Resend in ' + resendWait + 's') + '</button></div>' +
@@ -1351,6 +1398,285 @@
     else { document.getElementById('view-home').classList.remove('hidden'); document.getElementById('view-dashboard').classList.add('hidden'); renderNav(); }
   }
 
+  // ============================================================
+  // PASSWORD RESET MODAL
+  // ============================================================
+  function showResetPasswordModal() {
+    const modal = document.getElementById('resetPasswordModal');
+    const content = document.getElementById('resetPasswordContent');
+    
+    content.innerHTML =
+      '<div style="text-align:center;margin-bottom:16px;">' +
+        '<div style="width:70px;height:70px;margin:0 auto 14px;border-radius:20px;background:linear-gradient(135deg,#ff9f2e,#ffd84d);display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:#0b0e14;box-shadow:0 0 30px rgba(255,159,46,.6);"><i class="fa-solid fa-key"></i></div>' +
+        '<h2 style="padding:0;">Reset your password</h2>' +
+        '<p class="subtitle" style="margin-bottom:0;">Enter your email to receive a reset link</p></div>' +
+      '<div class="info-box"><i class="fa-solid fa-circle-info"></i>' +
+        '<div>We\'ll send a secure link to your email. Click it to set a new password.</div></div>' +
+      '<div class="form-group"><label>Email address</label>' +
+        '<input type="email" id="resetEmailInput" placeholder="you@example.com" autocomplete="email"></div>' +
+      '<div class="form-error" id="resetError" style="text-align:center;"></div>' +
+      '<button class="btn btn-primary btn-block btn-lg" id="btnResetPassword" onclick="App.submitResetPassword()"><i class="fa-solid fa-paper-plane"></i> Send reset link</button>' +
+      '<div style="text-align:center;margin-top:14px;">' +
+        '<button class="btn btn-ghost btn-sm" onclick="App.closeResetPassword(); App.showAuth(\'login\')"><i class="fa-solid fa-arrow-left"></i> Back to login</button></div>';
+    
+    modal.classList.remove('hidden');
+    setTimeout(function() {
+      const inp = document.getElementById('resetEmailInput');
+      if (inp) {
+        inp.focus();
+        inp.addEventListener('keypress', function(e){ if (e.key === 'Enter') App.submitResetPassword(); });
+      }
+    }, 150);
+  }
+
+  async function submitResetPassword() {
+    const inp = document.getElementById('resetEmailInput');
+    const errEl = document.getElementById('resetError');
+    const email = (inp.value || '').trim().toLowerCase();
+    if (!email || email.indexOf('@') === -1) { errEl.textContent = 'Enter a valid email address.'; return; }
+    
+    const btn = document.getElementById('btnResetPassword');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+    errEl.textContent = '';
+    
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: location.origin + location.pathname + '?reset=1'
+      });
+      if (error) throw error;
+      
+      pendingResetEmail = { email: email, sentAt: now() };
+      savePendingResetEmail(pendingResetEmail);
+      
+      toast('Password reset email sent! Check your inbox.', 'success');
+      
+      // Show success state
+      const content = document.getElementById('resetPasswordContent');
+      content.innerHTML =
+        '<div style="text-align:center;padding:10px 0;">' +
+          '<div class="success-tick"><i class="fa-solid fa-envelope-circle-check"></i></div>' +
+          '<h2 style="padding:0;">Check your email</h2>' +
+          '<p class="subtitle" style="margin-bottom:0;">We sent a reset link to <strong style="color:var(--orange-2);">' + escHtml(email) + '</strong></p></div>' +
+        '<div class="info-box"><i class="fa-solid fa-circle-info"></i>' +
+          '<div>Click the link in the email to set a new password. The link expires in 60 minutes.</div></div>' +
+        '<div class="alert alert-warn"><i class="fa-solid fa-triangle-exclamation"></i>' +
+          '<div>Didn\'t receive it? Check your spam folder, or <a onclick="App.submitResetPassword()">try again</a>.</div></div>' +
+        '<button class="btn btn-ghost btn-block" onclick="App.closeResetPassword(); App.showAuth(\'login\')"><i class="fa-solid fa-arrow-left"></i> Back to login</button>';
+    } catch (e) {
+      console.error('reset password error:', e);
+      errEl.textContent = e.message || 'Could not send reset email. Try again.';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send reset link';
+    }
+  }
+
+  function closeResetPassword() {
+    document.getElementById('resetPasswordModal').classList.add('hidden');
+    pendingResetEmail = null;
+    clearPendingResetEmail();
+  }
+
+  // ============================================================
+  // PASSWORD UPDATE MODAL (after clicking reset link)
+  // ============================================================
+  function showUpdatePasswordModal() {
+    const modal = document.getElementById('resetPasswordModal');
+    const content = document.getElementById('resetPasswordContent');
+    
+    content.innerHTML =
+      '<div style="text-align:center;margin-bottom:16px;">' +
+        '<div style="width:70px;height:70px;margin:0 auto 14px;border-radius:20px;background:linear-gradient(135deg,#2ee56b,#5cf09a);display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:#04130a;box-shadow:0 0 30px rgba(46,229,107,.6);"><i class="fa-solid fa-lock"></i></div>' +
+        '<h2 style="padding:0;">Set new password</h2>' +
+        '<p class="subtitle" style="margin-bottom:0;">Choose a strong password for your account</p></div>' +
+      '<div class="form-group"><label>New password</label>' +
+        '<div class="password-wrap">' +
+          '<input type="password" id="newPasswordInput" placeholder="••••••••" minlength="6" autocomplete="new-password">' +
+          '<button type="button" class="password-toggle" onclick="App.togglePasswordVisibility(\'newPasswordInput\', this)" tabindex="-1"><i class="fa-regular fa-eye"></i></button>' +
+        '</div></div>' +
+      '<div class="form-group"><label>Confirm new password</label>' +
+        '<div class="password-wrap">' +
+          '<input type="password" id="confirmNewPasswordInput" placeholder="••••••••" minlength="6" autocomplete="new-password">' +
+          '<button type="button" class="password-toggle" onclick="App.togglePasswordVisibility(\'confirmNewPasswordInput\', this)" tabindex="-1"><i class="fa-regular fa-eye"></i></button>' +
+        '</div></div>' +
+      '<div class="form-error" id="updatePasswordError" style="text-align:center;"></div>' +
+      '<button class="btn btn-green btn-block btn-lg" id="btnUpdatePassword" onclick="App.submitUpdatePassword()"><i class="fa-solid fa-check"></i> Update password</button>';
+    
+    modal.classList.remove('hidden');
+    setTimeout(function() {
+      const inp = document.getElementById('newPasswordInput');
+      if (inp) inp.focus();
+    }, 150);
+  }
+
+  async function submitUpdatePassword() {
+    const pwd = document.getElementById('newPasswordInput').value;
+    const confirm = document.getElementById('confirmNewPasswordInput').value;
+    const errEl = document.getElementById('updatePasswordError');
+    errEl.textContent = '';
+    
+    if (!pwd || pwd.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+    if (pwd !== confirm) { errEl.textContent = 'Passwords do not match.'; return; }
+    
+    const btn = document.getElementById('btnUpdatePassword');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Updating...';
+    
+    try {
+      const { data, error } = await supabase.auth.updateUser({ password: pwd });
+      if (error) throw error;
+      
+      toast('Password updated successfully! 🎉', 'success');
+      closeResetPassword();
+      
+      // Clean URL
+      if (location.search.indexOf('reset=1') !== -1 || location.hash.indexOf('access_token') !== -1) {
+        history.replaceState(null, '', location.pathname);
+      }
+      
+      // If user is signed in, go to dashboard
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session && session.user) {
+        await onUserSignedIn(session.user);
+      } else {
+        showAuth('login');
+      }
+    } catch (e) {
+      console.error('update password error:', e);
+      errEl.textContent = e.message || 'Could not update password. Try again.';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Update password';
+    }
+  }
+
+  // ============================================================
+  // WITHDRAWAL EMAIL VERIFICATION MODAL (first-time withdrawal)
+  // ============================================================
+  function showWithdrawEmailModal(sym) {
+    const modal = document.getElementById('withdrawEmailModal');
+    const content = document.getElementById('withdrawEmailContent');
+    const email = currentUser.email;
+    const code = gen6Digit();
+    pendingWithdrawEmail = { sym: sym, email: email, code: code, sentAt: now(), verified: false };
+    savePendingWithdrawEmail(pendingWithdrawEmail);
+
+    content.innerHTML =
+      '<div style="text-align:center;margin-bottom:16px;">' +
+        '<div style="width:70px;height:70px;margin:0 auto 14px;border-radius:20px;background:linear-gradient(135deg,#2ee56b,#5cf09a);display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:#04130a;box-shadow:0 0 30px rgba(46,229,107,.6);"><i class="fa-solid fa-shield-halved"></i></div>' +
+        '<h2 style="padding:0;">Verify Ownership</h2>' +
+        '<p class="subtitle" style="margin-bottom:0;">For your security, confirm that you are the account owner before your first withdrawal.</p></div>' +
+      '<div class="info-box"><i class="fa-solid fa-envelope"></i><div>We sent a 6-digit verification code to <strong style="color:var(--orange-2);">' + escHtml(email) + '</strong>. Enter it below to continue.</div></div>' +
+      '<div class="form-group"><label>Verification code</label>' +
+        '<input type="text" id="withdrawEmailCodeInput" placeholder="000000" maxlength="6" inputmode="numeric" style="text-align:center;font-family:JetBrains Mono,monospace;font-size:1.5rem;letter-spacing:.5em;font-weight:900;padding:16px 14px;" autocomplete="one-time-code"></div>' +
+      '<div class="form-error" id="withdrawEmailError" style="text-align:center;"></div>' +
+      '<button class="btn btn-green btn-block btn-lg" id="btnVerifyWithdrawEmail" onclick="App.submitWithdrawEmailCode()"><i class="fa-solid fa-check"></i> Verify &amp; continue</button>' +
+      '<div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);">' +
+        '<div style="font-size:.78rem;color:var(--text-3);margin-bottom:8px;font-weight:600;">Didn\'t get the email? Check your spam folder or</div>' +
+        '<button class="btn btn-ghost btn-sm" onclick="App.resendWithdrawEmail()"><i class="fa-solid fa-rotate"></i> Resend code</button></div>';
+    modal.classList.remove('hidden');
+
+    // Send the code via email using Resend Edge Function
+    (async function() {
+      try {
+        const res = await fetch(SUPABASE_EDGE + '/send-withdraw-code', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            to: email,
+            code: code,
+            coinAmount: fmtCoin(sym, (currentUser.balances && currentUser.balances[sym]) || 0),
+            coinSymbol: sym,
+            usdAmount: fmtMoney(coinToUsd(sym, (currentUser.balances && currentUser.balances[sym]) || 0)),
+            deviceInfo: (DEVICE.browser + ' on ' + DEVICE.os),
+            ipAddress: (currentUser.device && currentUser.device.ip) || 'unknown',
+          }),
+        });
+        const data = await res.json();
+        if (!data.ok) console.warn('Withdraw email failed:', data);
+        else toast('Verification code sent to your email.', 'success');
+      } catch (e) {
+        console.warn('Withdraw email error:', e);
+        toast('Could not send email — check your connection.', 'warn');
+      }
+    })();
+
+    setTimeout(function() {
+      const inp = document.getElementById('withdrawEmailCodeInput');
+      if (inp) { inp.focus(); inp.addEventListener('keypress', function(e){ if (e.key==='Enter') App.submitWithdrawEmailCode(); }); }
+    }, 150);
+  }
+
+  function submitWithdrawEmailCode() {
+    const inp = document.getElementById('withdrawEmailCodeInput');
+    const errEl = document.getElementById('withdrawEmailError');
+    const entered = (inp.value || '').trim();
+    const pending = pendingWithdrawEmail || loadPendingWithdrawEmail();
+    if (!pending) { errEl.textContent = 'Verification session expired. Please try again.'; return; }
+    if (!entered || entered.length < 6) { errEl.textContent = 'Enter the 6-digit code from your email.'; return; }
+    if (entered !== pending.code) { errEl.textContent = 'Incorrect code. Check your email and try again.'; return; }
+    pendingWithdrawEmail = null;
+    clearPendingWithdrawEmail();
+    withdrawEmailVerified = true;
+    document.getElementById('withdrawEmailModal').classList.add('hidden');
+    toast('Ownership verified! Continue with your withdrawal.', 'success');
+    const sym = pending.sym;
+    withdrawContext = { sym: sym, step: 1 };
+    document.getElementById('withdrawTitle').innerHTML = '<i class="fa-solid fa-money-bill-transfer" style="color:var(--orange);margin-right:8px;"></i>Withdraw ' + COINS[sym].name;
+    document.getElementById('withdrawSubtitle').textContent = 'Enter the amount you want to withdraw';
+    renderWithdrawStep();
+    document.getElementById('withdrawModal').classList.remove('hidden');
+  }
+
+  async function resendWithdrawEmail() {
+    const pending = pendingWithdrawEmail || loadPendingWithdrawEmail();
+    if (!pending || !pending.sym) { toast('Session expired — try again.', 'warn'); return; }
+    const newCode = gen6Digit();
+    pending.code = newCode; pending.sentAt = now();
+    pendingWithdrawEmail = pending;
+    savePendingWithdrawEmail(pending);
+    
+    try {
+      const res = await fetch(SUPABASE_EDGE + '/send-withdraw-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          to: pending.email,
+          code: newCode,
+          coinAmount: fmtCoin(pending.sym, (currentUser.balances && currentUser.balances[pending.sym]) || 0),
+          coinSymbol: pending.sym,
+          usdAmount: fmtMoney(coinToUsd(pending.sym, (currentUser.balances && currentUser.balances[pending.sym]) || 0)),
+          deviceInfo: (DEVICE.browser + ' on ' + DEVICE.os),
+          ipAddress: (currentUser.device && currentUser.device.ip) || 'unknown',
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) toast('New code sent to your email.', 'success');
+      else toast('Could not resend — try again.', 'warn');
+    } catch (e) {
+      toast('Could not resend — try again.', 'warn');
+    }
+    
+    const inp = document.getElementById('withdrawEmailCodeInput');
+    if (inp) inp.value = '';
+    const err = document.getElementById('withdrawEmailError');
+    if (err) err.textContent = '';
+  }
+
+  function closeWithdrawEmail() {
+    document.getElementById('withdrawEmailModal').classList.add('hidden');
+  }
+
+  // ============================================================
+  // AUTH MODAL (with show/hide password + forgot password)
+  // ============================================================
   function showAuth(mode, refCode) {
     mode = mode || 'login'; refCode = refCode || '';
     const modal = document.getElementById('authModal'); const content = document.getElementById('authContent');
@@ -1362,7 +1688,11 @@
       (!isLogin ? '<div class="info-box" style="background:rgba(255,92,92,.1);border-color:rgba(255,92,92,.4);color:#ffb0b0;"><i class="fa-solid fa-shield-halved" style="color:var(--red-2);"></i><div><strong>One account per household.</strong> Signing up multiple accounts on the same device, network, or IP will be blocked automatically.</div></div>' : '') +
       '<form id="authForm">' +
         '<div class="form-group"><label>Email address</label><input type="email" id="authEmail" required placeholder="you@example.com" autocomplete="email"></div>' +
-        '<div class="form-group"><label>Password</label><input type="password" id="authPassword" required placeholder="••••••••" minlength="6" autocomplete="' + (isLogin?'current-password':'new-password') + '"></div>' +
+        '<div class="form-group"><label>Password</label>' +
+          '<div class="password-wrap">' +
+            '<input type="password" id="authPassword" required placeholder="••••••••" minlength="6" autocomplete="' + (isLogin?'current-password':'new-password') + '">' +
+            '<button type="button" class="password-toggle" onclick="App.togglePasswordVisibility(\'authPassword\', this)" tabindex="-1" aria-label="Show password"><i class="fa-regular fa-eye"></i></button>' +
+          '</div></div>' +
         (!isLogin ? '<div class="form-group"><label>Preferred currency</label><select id="authCurrency"><option value="USD">USD — US Dollar</option><option value="EUR">EUR — Euro</option><option value="GBP">GBP — British Pound</option></select></div>' : '') +
         (!isLogin ? '<div class="form-group"><label>Referral code (optional)</label><input type="text" id="authRefCode" placeholder="Enter referral code" value="' + escHtml(refCode) + '"></div>' : '') +
         '<div class="form-group" style="background:rgba(255,159,46,.06);border:1px solid rgba(255,159,46,.35);border-radius:12px;padding:12px 14px;">' +
@@ -1372,6 +1702,7 @@
             '<input type="number" id="captchaAnswer" placeholder="Your answer" style="flex:1;min-width:100px;" inputmode="numeric">' +
             '<button type="button" class="btn btn-ghost btn-sm" onclick="App.refreshCaptcha()" title="New question"><i class="fa-solid fa-rotate"></i></button></div>' +
           '<div class="field-hint error" id="captchaHint"></div></div>' +
+        (isLogin ? '<div style="text-align:right;margin-bottom:12px;"><a onclick="App.showResetPassword()" style="color:var(--orange-2);cursor:pointer;text-decoration:none;font-weight:800;font-size:.8rem;">Forgot password?</a></div>' : '') +
         (!isLogin ? '<div style="font-size:.72rem;color:var(--text-3);line-height:1.6;margin-bottom:14px;font-weight:600;">By creating an account you agree to our <a onclick="App.showTerms()" style="color:var(--orange-2);text-decoration:underline;cursor:pointer;font-weight:800;">Terms of Service</a>.</div>' : '') +
         '<div class="form-error" id="authError"></div>' +
         '<button type="submit" class="btn btn-primary btn-block btn-lg" id="authSubmit"><i class="fa-solid ' + (isLogin?'fa-right-to-bracket':'fa-user-plus') + '"></i> ' + (isLogin?'Login':'Create account') + '</button></form>' +
@@ -1427,6 +1758,17 @@
     });
   }
   function closeAuth() { document.getElementById('authModal').classList.add('hidden'); }
+
+  function togglePasswordVisibility(inputId, btn) {
+    const inp = document.getElementById(inputId); if (!inp) return;
+    const isPwd = inp.type === 'password';
+    inp.type = isPwd ? 'text' : 'password';
+    if (btn) {
+      const icon = btn.querySelector('i');
+      if (icon) icon.className = isPwd ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+      btn.setAttribute('aria-label', isPwd ? 'Hide password' : 'Show password');
+    }
+  }
 
   async function doRegister(email, password, refCode, currency, info) {
     const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email: email, password: password });
@@ -1558,18 +1900,58 @@
     }
   }
 
+  // ------------------------------------------------------------------
+  // MINING LOOP — OFFLINE CATCH-UP
+  // ------------------------------------------------------------------
   function startMiningLoop() {
     stopMiningLoop(); if (!currentUser) return;
     hourlyWasReady = false;
+
+    if (currentUser.mining_active && currentUser.last_persist_at) {
+      const lastPersist = typeof currentUser.last_persist_at === 'number'
+        ? currentUser.last_persist_at
+        : new Date(currentUser.last_persist_at).getTime();
+      const gapSec = Math.max(0, (now() - lastPersist) / 1000);
+      if (gapSec > 10) {
+        const maxGapSec = 7 * 24 * 3600;
+        const effectiveGap = Math.min(gapSec, maxGapSec);
+        const mult = getEffectiveMultiplier(currentUser);
+        const streakBonus = 1 + Math.min((currentUser.login_streak || 1) * 0.05, 0.25);
+        let minedUsdThisGap = 0;
+        Object.keys(COINS).forEach(function(sym) {
+          const coin = COINS[sym];
+          const activeMult = sym === currentUser.active_coin ? 1 : 0.25;
+          const earned = coin.ratePerSec * effectiveGap * activeMult * mult * streakBonus;
+          if (!currentUser.balances) currentUser.balances = {};
+          currentUser.balances[sym] = (currentUser.balances[sym] || 0) + earned;
+          currentUser.total_mined = (currentUser.total_mined || 0) + earned;
+          minedUsdThisGap += coinToUsd(sym, earned);
+        });
+        currentUser.earnings_breakdown = addToEarnings(currentUser.earnings_breakdown, 'mining', minedUsdThisGap);
+        currentUser.session_seconds = (currentUser.session_seconds || 0) + effectiveGap;
+        persistProfile({
+          balances: currentUser.balances,
+          total_mined: currentUser.total_mined,
+          earnings_breakdown: currentUser.earnings_breakdown,
+          session_seconds: currentUser.session_seconds,
+          last_persist_at: now(),
+        });
+      }
+    }
+
     let lastTick = now();
     miningInterval = setInterval(function() {
-      if (!currentUser || !currentUser.mining_active) { lastTick = now(); return; }
-      const elapsedSec = Math.min((now() - lastTick) / 1000, 60); lastTick = now();
+      if (!currentUser) { lastTick = now(); return; }
+      if (!currentUser.mining_active) { lastTick = now(); return; }
+      const elapsedSec = Math.min((now() - lastTick) / 1000, 60);
+      lastTick = now();
       if (!currentUser.balances) currentUser.balances = {};
-      const mult = getEffectiveMultiplier(currentUser); const streakBonus = 1 + Math.min((currentUser.login_streak || 1) * 0.05, 0.25);
+      const mult = getEffectiveMultiplier(currentUser);
+      const streakBonus = 1 + Math.min((currentUser.login_streak || 1) * 0.05, 0.25);
       let minedUsdThisTick = 0;
       Object.keys(COINS).forEach(function(sym) {
-        const coin = COINS[sym]; const activeMult = sym === currentUser.active_coin ? 1 : 0.25;
+        const coin = COINS[sym];
+        const activeMult = sym === currentUser.active_coin ? 1 : 0.25;
         const earned = coin.ratePerSec * elapsedSec * activeMult * mult * streakBonus;
         currentUser.balances[sym] = (currentUser.balances[sym] || 0) + earned;
         currentUser.total_mined = (currentUser.total_mined || 0) + earned;
@@ -1579,21 +1961,36 @@
       currentUser.earnings_breakdown = addToEarnings(currentUser.earnings_breakdown, 'mining', minedUsdThisTick);
       updateLiveNumbers();
     }, 1000);
+
     persistInterval = setInterval(function() {
       if (!currentUser) return;
-      persistProfile({ balances: currentUser.balances, total_mined: currentUser.total_mined, session_seconds: currentUser.session_seconds, earnings_breakdown: currentUser.earnings_breakdown });
+      currentUser.last_persist_at = now();
+      persistProfile({
+        balances: currentUser.balances,
+        total_mined: currentUser.total_mined,
+        session_seconds: currentUser.session_seconds,
+        earnings_breakdown: currentUser.earnings_breakdown,
+        last_persist_at: currentUser.last_persist_at,
+      });
     }, 15000);
+
     sessionTimerInterval = setInterval(function() {
       if (!currentUser) return;
       const sec = Math.floor(currentUser.session_seconds || 0);
-      const h = String(Math.floor(sec/3600)).padStart(2,'0'); const m = String(Math.floor((sec%3600)/60)).padStart(2,'0'); const s = String(sec%60).padStart(2,'0');
-      const el = document.getElementById('sessionTime'); if (el) el.textContent = h + ':' + m + ':' + s;
+      const h = String(Math.floor(sec/3600)).padStart(2,'0');
+      const m = String(Math.floor((sec%3600)/60)).padStart(2,'0');
+      const s = String(sec%60).padStart(2,'0');
+      const el = document.getElementById('sessionTime');
+      if (el) el.textContent = h + ':' + m + ':' + s;
     }, 1000);
+
     if (hourlyTickInterval) clearInterval(hourlyTickInterval);
     hourlyTickInterval = setInterval(function() { renderHourlyClaim(); checkHourlyTransition(); }, 1000);
+
     if (taskTickInterval) clearInterval(taskTickInterval);
     taskTickInterval = setInterval(renderTasks, 1000);
   }
+
   function stopMiningLoop() {
     if (miningInterval) { clearInterval(miningInterval); miningInterval = null; }
     if (sessionTimerInterval) { clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
@@ -1601,16 +1998,26 @@
     if (taskTickInterval) { clearInterval(taskTickInterval); taskTickInterval = null; }
     if (persistInterval) { clearInterval(persistInterval); persistInterval = null; }
   }
+
   function updateLiveNumbers() {
     if (!currentUser) return;
     const active = COINS[currentUser.active_coin] || COINS.BTC;
     const rateEl = document.getElementById('miningRate');
-    if (rateEl) { const mult = getEffectiveMultiplier(currentUser); const streakBonus = 1 + Math.min((currentUser.login_streak || 1) * 0.05, 0.25); rateEl.textContent = (active.ratePerSec * mult * streakBonus).toFixed(8) + ' ' + active.ticker + '/s'; }
-    const activeEl = document.getElementById('activeCoinStat'); if (activeEl) activeEl.textContent = active.ticker;
+    if (rateEl) {
+      const mult = getEffectiveMultiplier(currentUser);
+      const streakBonus = 1 + Math.min((currentUser.login_streak || 1) * 0.05, 0.25);
+      rateEl.textContent = (active.ratePerSec * mult * streakBonus).toFixed(8) + ' ' + active.ticker + '/s';
+    }
+    const activeEl = document.getElementById('activeCoinStat');
+    if (activeEl) activeEl.textContent = active.ticker;
     Object.keys(COINS).forEach(function(sym) {
-      const el = document.getElementById('bal_' + sym); if (el) el.textContent = fmtCoin(sym, (currentUser.balances && currentUser.balances[sym]) || 0);
+      const el = document.getElementById('bal_' + sym);
+      if (el) el.textContent = fmtCoin(sym, (currentUser.balances && currentUser.balances[sym]) || 0);
       const usdEl = document.getElementById('usd_' + sym);
-      if (usdEl) { const usdVal = coinToUsd(sym, (currentUser.balances && currentUser.balances[sym]) || 0); usdEl.textContent = currencySymbol() + (usdVal * (CURRENCIES[(currentUser.currency||'USD')] || CURRENCIES.USD).rate).toFixed(2); }
+      if (usdEl) {
+        const usdVal = coinToUsd(sym, (currentUser.balances && currentUser.balances[sym]) || 0);
+        usdEl.textContent = currencySymbol() + (usdVal * (CURRENCIES[(currentUser.currency||'USD')] || CURRENCIES.USD).rate).toFixed(2);
+      }
     });
     renderTotalAssets();
   }
@@ -1652,19 +2059,12 @@
   function renderDashboard() {
     if (!currentUser) return;
     document.getElementById('userEmailShort').textContent = currentUser.email.split('@')[0];
-    renderEmailBanner(); renderMaintenanceBanner(); renderAnnouncementBanner();
+    renderMaintenanceBanner(); renderAnnouncementBanner();
     renderTicker(); renderCurrentPlanBanner(); renderCoinsGrid(); renderTotalAssets(); renderWithdrawalCard();
     renderWallets(); renderReferralCard(); renderDeviceInfo(); renderDashboardAlert(); renderDailyBonusBanner();
     renderMiningBadge(); renderHourlyClaim(); renderTasks(); renderWithdrawalsHistory(); updateLiveNumbers(); cycleMarketing(true);
   }
 
-  function renderEmailBanner() {
-    const el = document.getElementById('emailVerifyBanner'); if (!el) return;
-    if (currentUser.email_verified) { el.innerHTML = ''; return; }
-    el.innerHTML = '<div class="email-banner"><i class="fa-solid fa-triangle-exclamation"></i>' +
-      '<div class="text"><strong>Confirm your email</strong> to unlock withdrawals and secure your account.</div>' +
-      '<button class="btn btn-primary btn-sm" onclick="App.showConfirmAgain()"><i class="fa-solid fa-envelope-open-text"></i> Confirm now</button></div>';
-  }
   function renderMaintenanceBanner() {
     const el = document.getElementById('maintenanceBanner'); if (!el) return;
     if (platformSettings && platformSettings.maintenance_mode) {
@@ -1891,6 +2291,7 @@
     }).join('');
   }
 
+  // FIX: renderTotalAssets now respects breakdownOpen state
   function renderTotalAssets() {
     const el = document.getElementById('totalAssetsCard'); if (!el || !currentUser) return;
     const totalUsd = computeTotalAssets(currentUser); const sym_ = currencySymbol();
@@ -1927,14 +2328,17 @@
         '<div><div style="font-weight:900;color:var(--red-2);font-size:.88rem;">Account frozen</div>' +
         '<div style="font-size:.78rem;color:var(--text-2);font-weight:600;margin-top:2px;">' + escHtml(currentUser.frozen_reason || 'Contact support.') + '</div></div></div></div>';
     }
+    const panelHiddenClass = breakdownOpen ? '' : 'hidden';
+    const toggleIcon = breakdownOpen ? 'fa-chevron-down' : 'fa-list';
+    const toggleText = breakdownOpen ? 'Hide' : 'Breakdown';
     el.innerHTML = '<div class="total-assets-head">' +
         '<div class="label"><i class="fa-solid fa-chart-line"></i> Total Assets</div>' +
-        '<button class="btn btn-ghost btn-sm" style="padding:5px 10px;font-size:.7rem;" onclick="App.toggleBreakdown()"><i class="fa-solid fa-list" id="breakdownToggleIcon"></i> <span id="breakdownToggleText">Breakdown</span></button>' +
+        '<button class="btn btn-ghost btn-sm breakdown-toggle-btn" style="padding:5px 10px;font-size:.7rem;" onclick="App.toggleBreakdown()"><i class="fa-solid ' + toggleIcon + '" id="breakdownToggleIcon"></i> <span id="breakdownToggleText">' + toggleText + '</span></button>' +
       '</div>' +
       '<div class="total-assets-value">' + fmtMoney(totalUsd) + '<span class="usd-equiv">across ' + Object.keys(COINS).filter(function(s){ return ((currentUser.balances && currentUser.balances[s])||0) > 0; }).length + ' coins</span></div>' +
       '<div class="total-assets-sub">Everything you have mined and won.</div>' +
       '<div class="total-assets-breakdown">' + chips + '</div>' +
-      '<div id="earningsBreakdownPanel" class="hidden" style="margin-top:14px;padding:12px 14px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:14px;position:relative;z-index:1;">' +
+      '<div id="earningsBreakdownPanel" class="' + panelHiddenClass + '" style="margin-top:14px;padding:12px 14px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:14px;position:relative;z-index:1;">' +
         '<div style="font-size:.68rem;color:var(--text-3);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Lifetime Earnings Breakdown</div>' +
         breakdownHtml +
         '<div style="display:flex;justify-content:space-between;padding:10px 0 6px;border-top:2px solid rgba(255,255,255,.15);margin-top:6px;gap:10px;">' +
@@ -1949,11 +2353,8 @@
       '</div>' + frozenBanner;
   }
   function toggleBreakdown() {
-    const panel = document.getElementById('earningsBreakdownPanel'); if (!panel) return;
-    const icon = document.getElementById('breakdownToggleIcon'); const text = document.getElementById('breakdownToggleText');
-    const open = !panel.classList.contains('hidden');
-    if (open) { panel.classList.add('hidden'); if (icon) icon.className = 'fa-solid fa-list'; if (text) text.textContent = 'Breakdown'; }
-    else { panel.classList.remove('hidden'); if (icon) icon.className = 'fa-solid fa-chevron-down'; if (text) text.textContent = 'Hide'; }
+    breakdownOpen = !breakdownOpen;
+    renderTotalAssets();
   }
 
   function renderWithdrawalCard() {
@@ -1968,12 +2369,28 @@
       '<button class="btn btn-primary btn-block btn-lg" onclick="App.scrollToCoins()"><i class="fa-solid fa-arrow-up"></i> Choose a coin</button>';
   }
 
+  // ============================================================
+  // WITHDRAWAL FLOW — with first-time email ownership verification
+  // ============================================================
   function startWithdrawal(sym) {
     if (!currentUser) return;
     if (currentUser.frozen) { toast('Account is frozen — contact support.', 'error'); return; }
     const bal = (currentUser.balances && currentUser.balances[sym]) || 0;
     if (bal <= 0) { toast('No ' + COINS[sym].ticker + ' balance to withdraw', 'warn'); return; }
     if (!meetsWithdrawalRequirements(currentUser)) { clearWithdrawDraft(); withdrawContext = null; showRequirementsGate(); return; }
+    withdrawEmailVerified = false;
+    const hasWithdrawnBefore = (currentUser.withdrawals || []).length > 0;
+    if (!hasWithdrawnBefore) {
+      const pending = loadPendingWithdrawEmail();
+      if (pending && pending.sym === sym && pending.code && !pending.verified) {
+        pendingWithdrawEmail = pending;
+        showWithdrawEmailModal(sym);
+        return;
+      }
+      showWithdrawEmailModal(sym);
+      return;
+    }
+    withdrawEmailVerified = true;
     const draft = loadWithdrawDraft();
     if (draft && draft.sym === sym && draft.step >= 2 && draft.step < 4) {
       withdrawContext = Object.assign({}, draft);
@@ -2891,8 +3308,11 @@
   function toggleMining() {
     if (!currentUser) return;
     const next = !currentUser.mining_active;
-    persistProfile({ mining_active: next }); currentUser.mining_active = next;
-    renderMiningBadge(); toast(next ? 'Mining resumed' : 'Mining paused', next ? 'success' : 'warn');
+    persistProfile({ mining_active: next, last_persist_at: now() });
+    currentUser.mining_active = next;
+    if (typeof currentUser !== 'undefined' && currentUser) currentUser.last_persist_at = now();
+    renderMiningBadge();
+    toast(next ? 'Mining resumed' : 'Mining paused', next ? 'success' : 'warn');
   }
   function copyRefLink() {
     const input = document.getElementById('refLinkInput'); if (!input) return;
@@ -2909,7 +3329,7 @@
     if (settingsRefreshInterval) { clearInterval(settingsRefreshInterval); settingsRefreshInterval = null; }
     if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
     if (idleWarnTimer) { clearTimeout(idleWarnTimer); idleWarnTimer = null; }
-    if (currentUser) { try { await persistProfile({ balances: currentUser.balances, total_mined: currentUser.total_mined, session_seconds: currentUser.session_seconds, earnings_breakdown: currentUser.earnings_breakdown }); } catch(e){} }
+    if (currentUser) { try { await persistProfile({ balances: currentUser.balances, total_mined: currentUser.total_mined, session_seconds: currentUser.session_seconds, earnings_breakdown: currentUser.earnings_breakdown, last_persist_at: now() }); } catch(e){} }
     await supabase.auth.signOut();
     currentUser = null;
     document.getElementById('view-dashboard').classList.add('hidden');
@@ -2941,6 +3361,21 @@
     const pending = loadPendingConfirm();
     if (pending && pending.email) { pendingConfirmEmail = pending; }
 
+    const pendingWd = loadPendingWithdrawEmail();
+    if (pendingWd && pendingWd.code && !pendingWd.verified) { pendingWithdrawEmail = pendingWd; }
+
+    // Check for password reset in URL
+    const urlParams = new URLSearchParams(location.search);
+    const hashParams = new URLSearchParams(location.hash.replace('#', '?'));
+    const isPasswordReset = urlParams.get('reset') === '1' || hashParams.get('type') === 'recovery';
+    
+    if (isPasswordReset) {
+      // Supabase will auto-detect the session from URL hash
+      setTimeout(function() {
+        showUpdatePasswordModal();
+      }, 400);
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session && session.user) {
@@ -2954,13 +3389,24 @@
         if (profile.last_login_date !== today) loginStreak = (profile.last_login_date === yesterKey()) ? loginStreak + 1 : 1;
         let spinsToday = profile.spins_today || 0; let lastSpinDate = profile.last_spin_date || null;
         if (lastSpinDate !== today) { lastSpinDate = today; spinsToday = 0; }
-        const updated = await persistProfile({ device: info, last_device: info, ip: info.ip, last_ip: info.ip, last_login_date: today, login_streak: loginStreak, last_spin_date: lastSpinDate, spins_today: spinsToday, email_verified: !!session.user.email_confirmed_at });
+        const updated = await persistProfile({ device: info, last_device: info, ip: info.ip, last_ip: info.ip, last_login_date: today, login_streak: loginStreak, last_spin_date: lastSpinDate, spins_today: spinsToday, email_verified: !!session.user.email_confirmed_at, last_persist_at: now() });
         currentUser = updated || profile;
         clearPendingConfirm(); pendingConfirmEmail = null;
-        enterDashboard();
+        // If password reset, show update password modal first
+        if (isPasswordReset) {
+          showUpdatePasswordModal();
+        } else {
+          enterDashboard();
+        }
         return;
       }
     } catch (e) { console.warn('init session error:', e); }
+
+    // If password reset but no session, still show the modal (Supabase may need to verify token first)
+    if (isPasswordReset) {
+      showUpdatePasswordModal();
+      return;
+    }
 
     if (pendingConfirmEmail && pendingConfirmEmail.email) {
       setTimeout(function() { showConfirmEmailModal(pendingConfirmEmail.email); }, 400);
@@ -2989,6 +3435,13 @@
     refreshCaptcha, runTask, checkTaskAnswer, checkPhrase, checkMatch, copySnippet, completeTask,
     submitConfirmCode, submitConfirmLink, resendConfirm, changePendingEmail, closeConfirmEmail, showConfirmAgain,
     toggleBreakdown,
+    togglePasswordVisibility, closeWithdrawEmail, submitWithdrawEmailCode, resendWithdrawEmail,
+    // Password reset
+    showResetPassword: showResetPasswordModal,
+    closeResetPassword: closeResetPassword,
+    submitResetPassword: submitResetPassword,
+    submitUpdatePassword: submitUpdatePassword,
+    showUpdatePasswordModal: showUpdatePasswordModal,
   };
 
   document.addEventListener('DOMContentLoaded', init);
