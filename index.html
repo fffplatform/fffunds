@@ -802,9 +802,18 @@
   const SESSION_WARN_MS = 55 * 60 * 1000;
   const HOURLY_NOTIFY_KEY = 'fffunds_hourly_notified_at';
   const TRANSFER_DRAFT_KEY = 'fffunds_transfer_draft_v1';
+  const AUTH_STORAGE_KEY = 'fffunds_auth_session';
+  const PROFILE_CACHE_KEY = 'fffunds_profile_cache';
+  const PENDING_CONFIRM_KEY = 'fffunds_pending_confirm';
 
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: AUTH_STORAGE_KEY,
+      storage: window.localStorage,
+    }
   });
 
   // ============================================================
@@ -911,6 +920,9 @@
   let swRegistration = null;
   let wdHistoryCollapsed = true;
   let expandedWdItems = {};
+  let pendingConfirmEmail = null;
+  let authListenerBound = false;
+  let isRestoringSession = false;
 
   const $ = function(s) { return document.querySelector(s); };
   const now = function() { return Date.now(); };
@@ -965,6 +977,23 @@
     }
     doCopy();
   };
+
+  // ============================================================
+  // PENDING CONFIRM (localStorage — survives refresh)
+  // ============================================================
+  function savePendingConfirm(email) {
+    try { localStorage.setItem(PENDING_CONFIRM_KEY, JSON.stringify({ email: email, sentAt: now() })); } catch (e) {}
+  }
+  function loadPendingConfirm() {
+    try {
+      const raw = localStorage.getItem(PENDING_CONFIRM_KEY);
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      if (d.sentAt && (now() - d.sentAt) > 24 * 3600 * 1000) { localStorage.removeItem(PENDING_CONFIRM_KEY); return null; }
+      return d;
+    } catch (e) { return null; }
+  }
+  function clearPendingConfirm() { try { localStorage.removeItem(PENDING_CONFIRM_KEY); } catch (e) {} }
 
   // ============================================================
   // TRANSFER DRAFT (localStorage) — persists across app switches
@@ -1040,7 +1069,7 @@
   });
 
   // ============================================================
-  // MODAL STATE (used only when app backgrounds mid-flow)
+  // MODAL STATE
   // ============================================================
   function isCoinEmailVerified(sym) {
     if (!currentUser) return false;
@@ -1430,6 +1459,86 @@
   }
 
   // ============================================================
+  // AUTH SESSION MANAGEMENT (FIX)
+  // ============================================================
+  async function restoreSession() {
+    if (isRestoringSession) return;
+    isRestoringSession = true;
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) { console.warn('getSession error:', error); return; }
+      if (session && session.user) {
+        await handleAuthenticatedUser(session.user, false);
+      }
+    } catch (e) {
+      console.warn('restoreSession error:', e);
+    } finally {
+      isRestoringSession = false;
+    }
+  }
+
+  function bindAuthListener() {
+    if (authListenerBound) return;
+    authListenerBound = true;
+    supabase.auth.onAuthStateChange(async function(event, session) {
+      console.log('Auth event:', event);
+      if (event === 'SIGNED_IN' && session && session.user && !currentUser) {
+        await handleAuthenticatedUser(session.user, false);
+      } else if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        document.getElementById('view-dashboard').classList.add('hidden');
+        document.getElementById('view-home').classList.remove('hidden');
+        renderNav();
+      } else if (event === 'TOKEN_REFRESHED' && session && session.user && currentUser) {
+        // Session refreshed silently — no action needed
+      }
+    });
+  }
+
+  async function handleAuthenticatedUser(authUser, showDashboard) {
+    if (!authUser) return;
+    if (currentUser && currentUser.id === authUser.id && showDashboard !== true) {
+      // Already loaded — just ensure dashboard is visible
+      if (!document.getElementById('view-dashboard').classList.contains('hidden')) return;
+    }
+    try {
+      const deviceInfo = collectDeviceInfo();
+      const ipInfo = await fetchIPInfoServerSide();
+      const info = Object.assign({}, deviceInfo, ipInfo);
+      let profile;
+      try { profile = await loadOrCreateProfile(authUser, info); } catch (e) { console.error('loadOrCreateProfile:', e); return; }
+      const today = todayKey();
+      let loginStreak = profile.login_streak || 1;
+      if (profile.last_login_date !== today) loginStreak = (profile.last_login_date === yesterKey()) ? loginStreak + 1 : 1;
+      let spinsToday = profile.spins_today || 0; let lastSpinDate = profile.last_spin_date || null;
+      if (lastSpinDate !== today) { lastSpinDate = today; spinsToday = 0; }
+      const updated = await persistProfile({
+        device: info, last_device: info,
+        ip: info.ip || null, last_ip: info.ip || null,
+        isp: info.isp || null, last_isp: info.isp || null,
+        city: info.city || null, country: info.country || null, region: info.region || null,
+        last_login_date: today, login_streak: loginStreak,
+        last_spin_date: lastSpinDate, spins_today: spinsToday,
+        email_verified: !!authUser.email_confirmed_at,
+      });
+      currentUser = updated || profile;
+      clearPendingConfirm(); pendingConfirmEmail = null;
+
+      const urlParams = new URLSearchParams(location.search);
+      const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
+      const isPasswordReset = urlParams.get('reset') === '1' || hashParams.get('type') === 'recovery';
+      if (isPasswordReset) { showUpdatePasswordModal(); return; }
+
+      const handledWdVerify = tryHandleWithdrawVerifyLink();
+      if (handledWdVerify) { enterDashboard(); return; }
+
+      enterDashboard();
+    } catch (e) {
+      console.error('handleAuthenticatedUser error:', e);
+    }
+  }
+
+  // ============================================================
   // EMAIL CONFIRMATION
   // ============================================================
   function showConfirmEmailModal(email) {
@@ -1501,7 +1610,7 @@
       if (error) throw error;
       clearPendingConfirm(); pendingConfirmEmail = null;
       document.getElementById('confirmEmailModal').classList.add('hidden');
-      await onUserSignedIn(data.user);
+      await handleAuthenticatedUser(data.user, true);
     } catch (e) {
       errEl.textContent = e.message || 'Invalid or expired code.';
       btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check"></i> Confirm my account';
@@ -1533,7 +1642,7 @@
       clearPendingConfirm(); pendingConfirmEmail = null;
       document.getElementById('confirmEmailModal').classList.add('hidden');
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) await onUserSignedIn(user);
+      if (user) await handleAuthenticatedUser(user, true);
     } catch (e) {
       errEl.textContent = e.message || 'Invalid link. Try the 6-digit code instead.';
       const btn = document.getElementById('btnConfirmEmail');
@@ -1657,7 +1766,7 @@
       closeResetPassword();
       try { history.replaceState(null, '', location.pathname); } catch (e) {}
       const { data: { session } } = await supabase.auth.getSession();
-      if (session && session.user) await onUserSignedIn(session.user);
+      if (session && session.user) await handleAuthenticatedUser(session.user, true);
       else showAuth('login');
     } catch (e) {
       errEl.textContent = e.message || 'Could not update password.';
@@ -1672,7 +1781,7 @@
   }
 
   // ============================================================
-  // AUTH
+  // AUTH MODAL
   // ============================================================
   function showAuth(mode, refCode) {
     mode = mode || 'login'; refCode = refCode || '';
@@ -1784,56 +1893,7 @@
       closeAuth(); showConfirmEmailModal(email);
       return;
     }
-    await onUserSignedIn(signUpData.user, { refCode: refCode, currency: currency, info: info });
-  }
-
-  async function onUserSignedIn(authUser, signupMeta) {
-    signupMeta = signupMeta || {};
-    if (!signupMeta.info) {
-      try { const raw = sessionStorage.getItem('fffunds_signup_meta'); if (raw) { const parsed = JSON.parse(raw); signupMeta = parsed; sessionStorage.removeItem('fffunds_signup_meta'); } } catch (e) {}
-    }
-    let info = signupMeta.info || {};
-    if (!info.ip || info.ip === 'unknown' || !info.fingerprint_v2) {
-      const deviceInfo = collectDeviceInfo();
-      const ipInfo = await fetchIPInfoServerSide();
-      info = Object.assign({}, deviceInfo, ipInfo, { email: authUser.email.toLowerCase() });
-    }
-    const email = authUser.email.toLowerCase();
-    const refCode = signupMeta.refCode || '';
-    const currency = signupMeta.currency || 'USD';
-
-    let profile;
-    try { profile = await loadOrCreateProfile(authUser, info); } catch (err) { throw err; }
-
-    const deviceInfo = collectDeviceInfo(); deviceInfo.fingerprint_v2 = window._stableFp || '';
-    let refStatus = 'none'; let refCredit = null;
-    if (refCode && !profile.referred_by) {
-      try {
-        const { data, error } = await supabase.rpc('credit_referral', {
-          p_ref_code: refCode, p_new_user_id: authUser.id, p_new_email: email,
-          p_device: deviceInfo, p_ip: info.ip || null, p_isp: info.isp || null,
-          p_fingerprint: deviceInfo.fingerprint_v2 || deviceInfo.fingerprint || null,
-        });
-        if (error) { refStatus = 'rpc_error'; }
-        else if (data) { refCredit = data; refStatus = data.ok ? 'valid' : data.reason; }
-      } catch (e) { refStatus = 'rpc_exception'; }
-    }
-    try { await supabase.rpc('register_ip_hit', { p_ip: info.ip, p_email: email }); } catch (e) {}
-
-    const refAudit = { ref_code_tried: refCode || null, status: refStatus, rpc_signals: refCredit && refCredit.signals ? refCredit.signals : [], rpc_score: refCredit && refCredit.score ? refCredit.score : 0, ip: info.ip || null, isp: info.isp || null, ip_source: info.ip_source || 'unknown', fp: deviceInfo.fingerprint_v2 || null, at: new Date().toISOString() };
-    const profileUpdates = {
-      currency: currency,
-      ip: info.ip || null, last_ip: info.ip || null,
-      isp: info.isp || null, last_isp: info.isp || null,
-      city: info.city || null, country: info.country || null, region: info.region || null,
-      device: deviceInfo, last_device: deviceInfo,
-      ref_audit: refAudit, email_verified: !!authUser.email_confirmed_at,
-    };
-    if (refStatus === 'valid' && refCredit && refCredit.referrer_id) profileUpdates.referred_by = refCredit.referrer_id;
-    const updated = await persistProfile(profileUpdates);
-    currentUser = updated || Object.assign({}, profile, profileUpdates);
-
-    closeAuth(); closeConfirmEmail(); enterDashboard();
+    await handleAuthenticatedUser(signUpData.user, true);
   }
 
   async function doLogin(email, password, info) {
@@ -1846,7 +1906,7 @@
       throw new Error(error.message);
     }
     if (!data.user) throw new Error('Login failed.');
-    await onUserSignedIn(data.user, { info: info });
+    await handleAuthenticatedUser(data.user, true);
   }
 
   function getPlan(user) { return PLANS[(user && user.plan) || 'free'] || PLANS.free; }
@@ -2906,9 +2966,6 @@
     return map[status] || 'fa-clock';
   }
   function getStatusTimeline(w) {
-    const created = w.at || Date.now();
-    const reviewed = w.reviewed_at || w.approved_at || null;
-    const paid = w.paid_at || w.completed_at || null;
     const isRejected = (w.status || '').toLowerCase() === 'rejected';
     let stage = 0;
     if (w.status === 'pending') stage = 1;
@@ -3804,44 +3861,27 @@
     const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
     const isPasswordReset = urlParams.get('reset') === '1' || hashParams.get('type') === 'recovery';
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && session.user) {
-        const deviceInfo = collectDeviceInfo();
-        const ipInfo = await fetchIPInfoServerSide();
-        const info = Object.assign({}, deviceInfo, ipInfo);
-        let profile;
-        try { profile = await loadOrCreateProfile(session.user, info); } catch (e) { return; }
-        const today = todayKey();
-        let loginStreak = profile.login_streak || 1;
-        if (profile.last_login_date !== today) loginStreak = (profile.last_login_date === yesterKey()) ? loginStreak + 1 : 1;
-        let spinsToday = profile.spins_today || 0; let lastSpinDate = profile.last_spin_date || null;
-        if (lastSpinDate !== today) { lastSpinDate = today; spinsToday = 0; }
-        const updated = await persistProfile({
-          device: info, last_device: info,
-          ip: info.ip || null, last_ip: info.ip || null,
-          isp: info.isp || null, last_isp: info.isp || null,
-          city: info.city || null, country: info.country || null, region: info.region || null,
-          last_login_date: today, login_streak: loginStreak,
-          last_spin_date: lastSpinDate, spins_today: spinsToday,
-          email_verified: !!session.user.email_confirmed_at,
-        });
-        currentUser = updated || profile;
-        clearPendingConfirm(); pendingConfirmEmail = null;
+    // Bind auth state listener BEFORE restoring session
+    bindAuthListener();
 
-        if (isPasswordReset) { showUpdatePasswordModal(); return; }
+    // Restore session from storage
+    await restoreSession();
 
-        const handledWdVerify = tryHandleWithdrawVerifyLink();
-        if (handledWdVerify) { enterDashboard(); return; }
+    // If no session and password reset flow, show update modal
+    if (!currentUser && isPasswordReset) { setTimeout(function() { showUpdatePasswordModal(); }, 400); return; }
 
-        await enterDashboard();
-        return;
-      }
-    } catch (e) { console.warn('init session error:', e); }
+    // If no session and pending confirm, show confirm modal
+    if (!currentUser && pendingConfirmEmail && pendingConfirmEmail.email) {
+      setTimeout(function() { showConfirmEmailModal(pendingConfirmEmail.email); }, 400);
+      return;
+    }
 
-    if (isPasswordReset) { setTimeout(function() { showUpdatePasswordModal(); }, 400); return; }
-    if (pendingConfirmEmail && pendingConfirmEmail.email) { setTimeout(function() { showConfirmEmailModal(pendingConfirmEmail.email); }, 400); }
-    if (refCode) setTimeout(function() { if (!currentUser && !pendingConfirmEmail) showAuth('register', refCode); }, 700);
+    // If no session and ref code, show register
+    if (!currentUser && refCode) {
+      setTimeout(function() { if (!currentUser && !pendingConfirmEmail) showAuth('register', refCode); }, 700);
+    }
+
+    // Close modals on overlay click
     document.querySelectorAll('.modal-overlay').forEach(function(o) { o.addEventListener('click', function(e) { if (e.target === o) o.classList.add('hidden'); }); });
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay').forEach(function(o) { o.classList.add('hidden'); }); });
   }
