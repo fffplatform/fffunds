@@ -806,15 +806,32 @@
   const PROFILE_CACHE_KEY = 'fffunds_profile_cache';
   const PENDING_CONFIRM_KEY = 'fffunds_pending_confirm';
 
+  // ★ FIX #1: added flowType: 'pkce' for modern Supabase confirmation flow
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      flowType: 'pkce',                     // ★
       storageKey: AUTH_STORAGE_KEY,
       storage: window.localStorage,
     }
   });
+
+  // ★ FIX #2: PKCE callback handler — processes ?code= from confirmation link
+  (async function handlePkceCallback() {
+    try {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+      if (!code) return;
+      console.log('PKCE: exchanging code for session...');
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) console.warn('PKCE exchange failed:', error.message);
+      url.searchParams.delete('code');
+      const cleanUrl = url.pathname + (url.search ? url.search : '') + (url.hash ? url.hash : '');
+      window.history.replaceState({}, '', cleanUrl);
+    } catch (e) { console.warn('PKCE handler error:', e); }
+  })();
 
   // ============================================================
   // COINS
@@ -932,7 +949,13 @@
   const genRefId = function() { return 'CO-' + Math.random().toString(36).slice(2,6).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase(); };
   const genRefCode = function() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 8; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
   const gen6Digit = function() { return String(Math.floor(100000 + Math.random() * 900000)); };
-  const escHtml = function(s) { return String(s).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+
+  // ★ FIX #3: escHtml handles null/undefined safely
+  const escHtml = function(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  };
   const maskEmail = function(email) {
     if (!email || email.indexOf('@') === -1) return '***';
     const parts = email.split('@'); const local = parts[0], domain = parts[1];
@@ -1052,7 +1075,6 @@
     };
   }
 
-  // Auto-save listener on any input inside transfer modals
   document.addEventListener('input', function(e) {
     if (!e.target || !e.target.closest) return;
     const inBind = e.target.closest('#bindModal');
@@ -1068,9 +1090,6 @@
     if (inBind || inWithdraw || inSubscribe) saveTransferDraft();
   });
 
-  // ============================================================
-  // MODAL STATE
-  // ============================================================
   function isCoinEmailVerified(sym) {
     if (!currentUser) return false;
     const v = currentUser.email_verified_coins || {};
@@ -1459,7 +1478,7 @@
   }
 
   // ============================================================
-  // AUTH SESSION MANAGEMENT (FIX)
+  // AUTH SESSION MANAGEMENT
   // ============================================================
   async function restoreSession() {
     if (isRestoringSession) return;
@@ -1489,8 +1508,6 @@
         document.getElementById('view-dashboard').classList.add('hidden');
         document.getElementById('view-home').classList.remove('hidden');
         renderNav();
-      } else if (event === 'TOKEN_REFRESHED' && session && session.user && currentUser) {
-        // Session refreshed silently — no action needed
       }
     });
   }
@@ -1498,7 +1515,6 @@
   async function handleAuthenticatedUser(authUser, showDashboard) {
     if (!authUser) return;
     if (currentUser && currentUser.id === authUser.id && showDashboard !== true) {
-      // Already loaded — just ensure dashboard is visible
       if (!document.getElementById('view-dashboard').classList.contains('hidden')) return;
     }
     try {
@@ -1506,7 +1522,57 @@
       const ipInfo = await fetchIPInfoServerSide();
       const info = Object.assign({}, deviceInfo, ipInfo);
       let profile;
-      try { profile = await loadOrCreateProfile(authUser, info); } catch (e) { console.error('loadOrCreateProfile:', e); return; }
+      try {
+        profile = await loadOrCreateProfile(authUser, info);
+      } catch (e) {
+        console.error('loadOrCreateProfile:', e);
+        toast('Account setup failed: ' + (e.message || 'unknown error'), 'error');
+        const errEl = document.getElementById('authError');
+        if (errEl) errEl.textContent = 'Account setup failed: ' + (e.message || 'unknown error');
+        return;
+      }
+
+      // ★ FIX #4: credit referral if user signed up with a code
+      try {
+        const pendingMeta = JSON.parse(sessionStorage.getItem('fffunds_signup_meta') || '{}');
+        const pendingRefCode = pendingMeta.refCode || '';
+        if (pendingRefCode && !profile.referred_by) {
+          console.log('[referral] Attempting to credit code:', pendingRefCode);
+
+          const hwFp = [
+            navigator.hardwareConcurrency || '0',
+            navigator.deviceMemory || '0',
+            navigator.maxTouchPoints || '0',
+            navigator.platform || 'unknown',
+            screen.colorDepth || '0',
+          ].join('|');
+
+          const { data: refResult, error: refErr } = await supabase.rpc('credit_referral', {
+            p_ref_code: pendingRefCode,
+            p_new_user_id: authUser.id,
+            p_new_email: authUser.email.toLowerCase(),
+            p_device: collectDeviceInfo(),
+            p_ip: info.ip || null,
+            p_isp: info.isp || null,
+            p_fingerprint: window._stableFp || getCanvasFingerprint(),
+            p_hw_fp: hwFp,
+          });
+
+          if (refErr) {
+            console.warn('[referral] credit_referral error:', refErr.message);
+          } else if (refResult && refResult.ok) {
+            console.log('[referral] credited:', refResult);
+            toast('Referral recorded — welcome!', 'success');
+          } else {
+            console.warn('[referral] not credited:', refResult);
+          }
+          sessionStorage.removeItem('fffunds_signup_meta');
+        } else if (pendingRefCode && profile.referred_by) {
+          console.log('[referral] already credited, skipping');
+          sessionStorage.removeItem('fffunds_signup_meta');
+        }
+      } catch (e) { console.warn('[referral] threw:', e); }
+
       const today = todayKey();
       let loginStreak = profile.login_streak || 1;
       if (profile.last_login_date !== today) loginStreak = (profile.last_login_date === yesterKey()) ? loginStreak + 1 : 1;
@@ -1535,6 +1601,7 @@
       enterDashboard();
     } catch (e) {
       console.error('handleAuthenticatedUser error:', e);
+      toast('Sign-in error: ' + (e.message || 'unknown'), 'error');
     }
   }
 
@@ -1654,7 +1721,13 @@
     const pending = pendingConfirmEmail || loadPendingConfirm();
     if (!pending || !pending.email) { toast('Email lost — sign up again.', 'warn'); return; }
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: pending.email });
+      // ★ FIX #5: pass emailRedirectTo so link lands on our site
+      const redirectTo = window.location.origin + window.location.pathname;
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: pending.email,
+        options: { emailRedirectTo: redirectTo }
+      });
       if (error) throw error;
       pendingConfirmEmail = { email: pending.email, sentAt: now() };
       savePendingConfirm(pending.email);
@@ -1877,7 +1950,13 @@
   }
 
   async function doRegister(email, password, refCode, currency, info) {
-    const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email: email, password: password });
+    // ★ FIX #6: pass emailRedirectTo so confirmation link lands on our site
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: { emailRedirectTo: redirectTo }
+    });
     if (signUpErr) {
       if (/already registered|already exists/i.test(signUpErr.message)) {
         pendingConfirmEmail = { email: email, sentAt: now() };
@@ -2168,7 +2247,6 @@
   function restoreTransferDraft() {
     if (!currentUser) return;
     const d = loadTransferDraft();
-    // Restore bind modal
     if (d.bind && d.bind.sym) {
       const sym = d.bind.sym;
       const w = (currentUser.wallets || {})[sym];
@@ -2193,7 +2271,6 @@
         return;
       }
     }
-    // Restore subscribe modal
     if (d.subscribe && d.subscribe.orderId) {
       const order = (currentUser.pending_orders || []).find(function(o){ return o.id === d.subscribe.orderId; });
       if (order && order.status !== 'approved' && order.status !== 'cancelled') {
@@ -2207,7 +2284,6 @@
         return;
       }
     }
-    // Restore withdraw modal
     if (d.withdraw && d.withdraw.sym) {
       const sym = d.withdraw.sym;
       const bal = (currentUser.balances && currentUser.balances[sym]) || 0;
@@ -3168,7 +3244,6 @@
       '<button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="App.cancelBind(\'' + sym + '\')"><i class="fa-solid fa-xmark"></i> Cancel</button>';
 
     renderQRWithLogo('bindQR', coin.platformAddr, sym);
-    // Restore from local draft
     const saved = loadTransferDraft();
     if (saved.bind && saved.bind.sym === sym) {
       setTimeout(function() {
@@ -3282,7 +3357,6 @@
 
     await persistProfile({ wallets: newWallets, wallet_change_requests: existingRequests });
 
-    // Clear bind draft from local storage
     try {
       const d = loadTransferDraft();
       d.bind = null;
@@ -3745,7 +3819,6 @@
         (isReview ? '<button class="btn btn-ghost btn-block" onclick="App.closeSubscribe()">Close</button>' : '') + '</div>';
     document.getElementById('subscribeModal').classList.remove('hidden');
     renderQRWithLogo('orderQR', order.address, order.coin);
-    // Restore from draft
     const saved = loadTransferDraft();
     if (saved.subscribe && saved.subscribe.orderId === orderId) {
       setTimeout(function() {
@@ -3768,7 +3841,6 @@
     if (!senderAddr || senderAddr.length < 20) { err.textContent = 'Enter the sending wallet address.'; return; }
     const orders = currentUser.pending_orders.map(function(o) { return o.id === orderId ? Object.assign({}, o, { status:'pending_review', tx_hash:txHash, sender_addr:senderAddr, paid_at: now() }) : o; });
     const updated = await persistProfile({ pending_orders: orders }); if (updated) currentUser = updated;
-    // Clear subscribe draft
     try { const d = loadTransferDraft(); d.subscribe = null; localStorage.setItem(TRANSFER_DRAFT_KEY, JSON.stringify(d)); } catch (e) {}
     toast('Payment submitted', 'success');
     closeSubscribe(); renderDashboard();
@@ -3791,9 +3863,41 @@
     const link = location.origin + location.pathname + '?ref=' + currentUser.ref_code;
     el.textContent = MARKETING_TEMPLATES[currentMarketingIndex].replace('{LINK}', link);
   }
+
+  // ★ FIX #7: shareMarketing with Promise-aware copy + DOM fallback
   function shareMarketing() {
     const el = document.getElementById('marketingText'); if (!el) return;
-    if (navigator.clipboard) navigator.clipboard.writeText(el.textContent).then(function(){ toast('Copied', 'success'); });
+    const text = el.textContent;
+
+    const fallbackCopy = function() {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '0';
+        ta.style.left = '0';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        const ok = document.execCommand('copy');
+        ta.remove();
+        if (ok) toast('Copied — now paste in your post', 'success');
+        else toast('Copy failed — long-press the snippet to copy', 'warn');
+      } catch (e) {
+        toast('Copy failed — long-press the snippet to copy', 'warn');
+      }
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(function() { toast('Copied — now paste in your post', 'success'); })
+        .catch(function() { fallbackCopy(); });
+    } else {
+      fallbackCopy();
+    }
   }
 
   function setActiveCoin(sym) {
@@ -3812,12 +3916,37 @@
     renderMiningBadge();
     toast(next ? 'Mining resumed' : 'Mining paused', next ? 'success' : 'warn');
   }
+
+  // ★ FIX #8: copyRefLink with Promise-aware copy + readonly toggle for Android
   function copyRefLink() {
     const input = document.getElementById('refLinkInput'); if (!input) return;
-    input.select(); input.setSelectionRange(0,99999);
-    try { navigator.clipboard.writeText(input.value); toast('Referral link copied!', 'success'); }
-    catch (e) { document.execCommand('copy'); toast('Referral link copied!', 'success'); }
+    const text = input.value;
+
+    const fallbackCopy = function() {
+      try {
+        input.removeAttribute('readonly');
+        input.focus();
+        input.select();
+        input.setSelectionRange(0, text.length);
+        const ok = document.execCommand('copy');
+        input.setAttribute('readonly', 'readonly');
+        if (ok) toast('Referral link copied!', 'success');
+        else toast('Copy failed — long-press to copy manually', 'warn');
+      } catch (e) {
+        input.setAttribute('readonly', 'readonly');
+        toast('Copy failed — long-press the field to copy', 'warn');
+      }
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(function() { toast('Referral link copied!', 'success'); })
+        .catch(function() { fallbackCopy(); });
+    } else {
+      fallbackCopy();
+    }
   }
+
   function showHowItWorks() { document.getElementById('howModal').classList.remove('hidden'); }
   function closeHowItWorks() { document.getElementById('howModal').classList.add('hidden'); }
 
@@ -3861,27 +3990,20 @@
     const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
     const isPasswordReset = urlParams.get('reset') === '1' || hashParams.get('type') === 'recovery';
 
-    // Bind auth state listener BEFORE restoring session
     bindAuthListener();
-
-    // Restore session from storage
     await restoreSession();
 
-    // If no session and password reset flow, show update modal
     if (!currentUser && isPasswordReset) { setTimeout(function() { showUpdatePasswordModal(); }, 400); return; }
 
-    // If no session and pending confirm, show confirm modal
     if (!currentUser && pendingConfirmEmail && pendingConfirmEmail.email) {
       setTimeout(function() { showConfirmEmailModal(pendingConfirmEmail.email); }, 400);
       return;
     }
 
-    // If no session and ref code, show register
     if (!currentUser && refCode) {
       setTimeout(function() { if (!currentUser && !pendingConfirmEmail) showAuth('register', refCode); }, 700);
     }
 
-    // Close modals on overlay click
     document.querySelectorAll('.modal-overlay').forEach(function(o) { o.addEventListener('click', function(e) { if (e.target === o) o.classList.add('hidden'); }); });
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay').forEach(function(o) { o.classList.add('hidden'); }); });
   }
