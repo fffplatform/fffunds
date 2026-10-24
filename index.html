@@ -472,6 +472,67 @@
   .password-wrap input { padding-right: 48px; }
   .password-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-3); font-size: 1rem; cursor: pointer; padding: 8px 10px; border-radius: 8px; line-height: 1; }
   .password-toggle:hover { color: var(--orange); background: rgba(255,159,46,.1); }
+
+  /* ★ NEW: Frozen account full-width red banner */
+  .frozen-banner {
+    background: linear-gradient(135deg, rgba(255,50,50,.35), rgba(180,0,0,.5));
+    border: 2px solid var(--red);
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: relative;
+    box-shadow: 0 0 40px rgba(255,50,50,.5), inset 0 0 30px rgba(255,0,0,.2);
+    animation: frozenPulse 2s ease-in-out infinite;
+    z-index: 10;
+  }
+  @keyframes frozenPulse {
+    0%,100% { box-shadow: 0 0 30px rgba(255,50,50,.5), inset 0 0 20px rgba(255,0,0,.15); }
+    50% { box-shadow: 0 0 60px rgba(255,50,50,.8), inset 0 0 40px rgba(255,0,0,.3); }
+  }
+  .frozen-banner .frozen-icon {
+    font-size: 2.4rem;
+    color: #ff9999;
+    margin-bottom: 8px;
+    display: block;
+    text-shadow: 0 0 20px rgba(255,100,100,.8);
+  }
+  .frozen-banner h2 {
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    font-weight: 900;
+    color: #fff;
+    margin: 0 0 6px 0;
+    letter-spacing: -.02em;
+    padding: 0;
+  }
+  .frozen-banner .frozen-reason {
+    font-size: clamp(.88rem, 2vw, 1rem);
+    color: #ffd0d0;
+    font-weight: 700;
+    line-height: 1.6;
+    background: rgba(0,0,0,.3);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    border-left: 4px solid rgba(255,255,255,.4);
+  }
+  .frozen-banner .frozen-note {
+    font-size: .8rem;
+    color: #ffbbbb;
+    font-weight: 600;
+  }
+
+  /* ★ NEW: Email verification modal countdown */
+  .email-verify-countdown {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: var(--orange);
+    text-align: center;
+    padding: 8px;
+    background: rgba(255,159,46,.08);
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
 </style>
 </head>
 <body>
@@ -496,6 +557,8 @@
   </nav>
 
   <div id="view-dashboard" class="dashboard hidden">
+    <!-- ★ NEW: Frozen banner container at the very top -->
+    <div id="frozenBannerContainer"></div>
     <div class="welcome-bar">
       <div>
         <h1>Welcome back, <span id="userEmailShort" style="color:var(--orange);">miner</span></h1>
@@ -806,6 +869,7 @@
   const PROFILE_CACHE_KEY = 'fffunds_profile_cache';
   const PENDING_CONFIRM_KEY = 'fffunds_pending_confirm';
   const DEVICE_ACCOUNT_KEY = 'fffunds_device_account';
+  const EMAIL_VERIFY_STATE_KEY = 'fffunds_email_verify_state';
 
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
@@ -939,6 +1003,8 @@
   let pendingConfirmEmail = null;
   let authListenerBound = false;
   let isRestoringSession = false;
+  let emailVerifyState = null; // { sym, code, sentAt, token }
+  let frozenCheckInterval = null;
 
   const $ = function(s) { return document.querySelector(s); };
   const now = function() { return Date.now(); };
@@ -1017,6 +1083,30 @@
   function clearPendingConfirm() { try { localStorage.removeItem(PENDING_CONFIRM_KEY); } catch (e) {} }
 
   // ============================================================
+  // ★ NEW: EMAIL VERIFY STATE PERSISTENCE
+  // ============================================================
+  function saveEmailVerifyState(sym, code, token) {
+    try {
+      const state = { sym, code, token, sentAt: now() };
+      localStorage.setItem(EMAIL_VERIFY_STATE_KEY, JSON.stringify(state));
+      emailVerifyState = state;
+    } catch (e) {}
+  }
+  function loadEmailVerifyState() {
+    try {
+      const raw = localStorage.getItem(EMAIL_VERIFY_STATE_KEY);
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      // Expire after 30 minutes
+      if (d.sentAt && (now() - d.sentAt) > 30 * 60 * 1000) { localStorage.removeItem(EMAIL_VERIFY_STATE_KEY); return null; }
+      return d;
+    } catch (e) { return null; }
+  }
+  function clearEmailVerifyState() {
+    try { localStorage.removeItem(EMAIL_VERIFY_STATE_KEY); emailVerifyState = null; } catch (e) {}
+  }
+
+  // ============================================================
   // TRANSFER DRAFT (localStorage) — persists across app switches
   // ============================================================
   function saveTransferDraft() {
@@ -1025,11 +1115,24 @@
         bind: bindDraftSnapshot(),
         withdraw: withdrawDraftSnapshot(),
         subscribe: subscribeDraftSnapshot(),
+        // ★ NEW: Save which modal is currently open
+        activeModal: getActiveTransferModal(),
+        bindSym: window._bindSym || null,
+        bindStep: bindStep,
         ts: now(),
       };
       localStorage.setItem(TRANSFER_DRAFT_KEY, JSON.stringify(d));
     } catch (e) {}
   }
+
+  function getActiveTransferModal() {
+    if (!document.getElementById('withdrawEmailModal').classList.contains('hidden')) return 'withdrawEmail';
+    if (!document.getElementById('bindModal').classList.contains('hidden')) return 'bind';
+    if (!document.getElementById('withdrawModal').classList.contains('hidden')) return 'withdraw';
+    if (!document.getElementById('subscribeModal').classList.contains('hidden')) return 'subscribe';
+    return null;
+  }
+
   function loadTransferDraft() {
     try {
       const raw = localStorage.getItem(TRANSFER_DRAFT_KEY);
@@ -1314,6 +1417,67 @@
     const { data, error } = await supabase.from('profiles').update(partial).eq('id', currentUser.id).select().single();
     if (error) { console.error('persistProfile failed:', error.message, 'keys:', Object.keys(partial)); return null; }
     return data;
+  }
+
+  // ============================================================
+  // ★ NEW: FROZEN ACCOUNT CHECK
+  // ============================================================
+  async function checkFrozenStatus() {
+    if (!currentUser || !currentUser.id) return;
+    try {
+      const { data, error } = await supabase.from('profiles').select('frozen, frozen_reason, frozen_at').eq('id', currentUser.id).maybeSingle();
+      if (error) return;
+      if (data && data.frozen) {
+        currentUser.frozen = true;
+        currentUser.frozen_reason = data.frozen_reason || 'Your account has been frozen by the administrator.';
+        currentUser.frozen_at = data.frozen_at;
+        if (currentUser.mining_active) {
+          currentUser.mining_active = false;
+          await flushMiningNow('frozen').catch(function(){});
+          if (miningInterval) { clearInterval(miningInterval); miningInterval = null; }
+          if (persistInterval) { clearInterval(persistInterval); persistInterval = null; }
+          if (sessionTimerInterval) { clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
+        }
+        renderFrozenBanner();
+        renderMiningBadge();
+      } else if (data && data.frozen === false && currentUser.frozen) {
+        currentUser.frozen = false;
+        currentUser.frozen_reason = null;
+        renderFrozenBanner();
+        if (!miningInterval && currentUser.mining_active !== false) {
+          startMiningLoop();
+        }
+      }
+    } catch (e) {}
+  }
+
+  function renderFrozenBanner() {
+    const container = document.getElementById('frozenBannerContainer');
+    if (!container) return;
+    if (!currentUser || !currentUser.frozen) {
+      container.innerHTML = '';
+      return;
+    }
+    container.innerHTML =
+      '<div class="frozen-banner" role="alert">' +
+        '<div style="text-align:center;">' +
+          '<i class="fa-solid fa-snowflake frozen-icon"></i>' +
+          '<h2><i class="fa-solid fa-ban" style="margin-right:8px;"></i>Account Frozen</h2>' +
+          '<div class="frozen-reason">' + escHtml(currentUser.frozen_reason || 'Your account has been frozen by the administrator.') + '</div>' +
+          '<div class="frozen-note"><i class="fa-solid fa-lock"></i> Mining, claiming, and withdrawals are disabled. Contact support to appeal.</div>' +
+        '</div>' +
+      '</div>';
+    // Disable action buttons
+    const btnMine = document.getElementById('btnToggleMine');
+    if (btnMine) { btnMine.disabled = true; btnMine.innerHTML = '<i class="fa-solid fa-lock"></i> Mining Disabled'; }
+    const btnClaim = document.querySelector('.hourly-btn');
+    if (btnClaim) { btnClaim.disabled = true; btnClaim.innerHTML = '<i class="fa-solid fa-lock"></i> Disabled'; }
+  }
+
+  function startFrozenCheckLoop() {
+    if (frozenCheckInterval) clearInterval(frozenCheckInterval);
+    frozenCheckInterval = setInterval(checkFrozenStatus, 30000);
+    checkFrozenStatus();
   }
 
   // ============================================================
@@ -2058,6 +2222,7 @@
 
   function creditMiningForSeconds(seconds) {
     if (!currentUser || !currentUser.mining_active) return 0;
+    if (currentUser.frozen) return 0;
     if (!seconds || seconds <= 0) return 0;
     const cap = 7 * 24 * 3600;
     const effectiveGap = Math.min(seconds, cap);
@@ -2096,6 +2261,7 @@
 
   async function reconcileMiningGap() {
     if (!currentUser || !currentUser.mining_active || !currentUser.last_persist_at) return;
+    if (currentUser.frozen) return;
     const lastPersist = typeof currentUser.last_persist_at === 'number' ? currentUser.last_persist_at : new Date(currentUser.last_persist_at).getTime();
     const gapSec = Math.max(0, (now() - lastPersist) / 1000);
     if (gapSec <= 5) { _lastMiningTick = now(); return; }
@@ -2112,6 +2278,7 @@
 
   function startMiningLoop() {
     stopMiningLoop(); if (!currentUser) return;
+    if (currentUser.frozen) return;
     hourlyWasReady = false;
 
     if (!window._ffFlushBound) {
@@ -2126,6 +2293,7 @@
 
     (async function offlineCatchUp() {
       if (!currentUser || !currentUser.mining_active || !currentUser.last_persist_at) { _lastMiningTick = now(); return; }
+      if (currentUser.frozen) return;
       const lastPersist = typeof currentUser.last_persist_at === 'number' ? currentUser.last_persist_at : new Date(currentUser.last_persist_at).getTime();
       const gapSec = Math.max(0, (now() - lastPersist) / 1000);
       if (gapSec <= 5) { _lastMiningTick = now(); return; }
@@ -2142,7 +2310,7 @@
 
     _tickRunning = true;
     miningInterval = setInterval(function() {
-      if (!currentUser || !currentUser.mining_active) { _lastMiningTick = now(); return; }
+      if (!currentUser || !currentUser.mining_active || currentUser.frozen) { _lastMiningTick = now(); return; }
       const elapsedSec = Math.min((now() - _lastMiningTick) / 1000, 60);
       _lastMiningTick = now();
       if (elapsedSec <= 0) return;
@@ -2233,24 +2401,50 @@
     document.getElementById('view-home').classList.add('hidden');
     document.getElementById('view-dashboard').classList.remove('hidden');
     renderNav(); renderDashboard();
-    await reconcileMiningGap().catch(function(){});
-    startMiningLoop(); startPriceLoop(); resetIdleTimer();
+    await checkFrozenStatus();
+    if (!currentUser.frozen) {
+      await reconcileMiningGap().catch(function(){});
+      startMiningLoop();
+    } else {
+      renderFrozenBanner();
+    }
+    startPriceLoop();
+    startFrozenCheckLoop();
+    resetIdleTimer();
     window.scrollTo({ top:0, behavior:'smooth' });
     restoreTransferDraft();
   }
   function navigate() { if (!currentUser) { showAuth('login'); return; } enterDashboard(); }
 
+  // ★ NEW: Enhanced restoreTransferDraft with email verification state restoration
   function restoreTransferDraft() {
     if (!currentUser) return;
+
+    // First check if there was an email verification in progress
+    const savedEmailState = loadEmailVerifyState();
+    if (savedEmailState && savedEmailState.sym && savedEmailState.code) {
+      const sym = savedEmailState.sym;
+      // Only restore if the coin is still not verified and the code hasn't expired
+      if (!isCoinEmailVerified(sym)) {
+        emailVerifyState = savedEmailState;
+        showWithdrawEmailModalFromState(sym, savedEmailState.code, savedEmailState.token);
+        return;
+      } else {
+        clearEmailVerifyState();
+      }
+    }
+
     const d = loadTransferDraft();
-    if (d.bind && d.bind.sym) {
+    if (!d || !d.activeModal) return;
+
+    if (d.activeModal === 'bind' && d.bind && d.bind.sym) {
       const sym = d.bind.sym;
       const w = (currentUser.wallets || {})[sym];
       const alreadyBound = w && w.bound;
       const alreadyPending = w && w.pending && !w.bound;
       if (!alreadyBound && !alreadyPending) {
         window._bindSym = sym;
-        bindStep = d.bind.step || 2;
+        bindStep = d.bind.step || d.bindStep || 2;
         if (bindStep === 1) renderBindIntro(sym);
         else {
           renderBindPayment(sym);
@@ -2267,7 +2461,8 @@
         return;
       }
     }
-    if (d.subscribe && d.subscribe.orderId) {
+
+    if (d.activeModal === 'subscribe' && d.subscribe && d.subscribe.orderId) {
       const order = (currentUser.pending_orders || []).find(function(o){ return o.id === d.subscribe.orderId; });
       if (order && order.status !== 'approved' && order.status !== 'cancelled') {
         showSubscribe(order.id);
@@ -2280,7 +2475,8 @@
         return;
       }
     }
-    if (d.withdraw && d.withdraw.sym) {
+
+    if (d.activeModal === 'withdraw' && d.withdraw && d.withdraw.sym) {
       const sym = d.withdraw.sym;
       const bal = (currentUser.balances && currentUser.balances[sym]) || 0;
       if (bal > 0) {
@@ -2300,6 +2496,7 @@
   function renderDashboard() {
     if (!currentUser) return;
     document.getElementById('userEmailShort').textContent = currentUser.email.split('@')[0];
+    renderFrozenBanner();
     renderMaintenanceBanner(); renderAnnouncementBanner();
     renderTicker(); renderCurrentPlanBanner(); renderCoinsGrid(); renderTotalAssets(); renderWithdrawalCard();
     renderWallets(); renderReferralCard(); renderDeviceInfo(); renderDashboardAlert(); renderDailyBonusBanner();
@@ -2340,6 +2537,12 @@
   function renderMiningBadge() {
     const badge = document.getElementById('miningStatusBadge'); const btn = document.getElementById('btnToggleMine');
     if (!badge || !btn) return;
+    if (currentUser.frozen) {
+      badge.className = 'badge badge-red'; badge.innerHTML = '<i class="fa-solid fa-lock" style="font-size:.5rem;"></i> Frozen';
+      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-lock"></i> Frozen';
+      return;
+    }
+    btn.disabled = false;
     if (currentUser.mining_active) {
       badge.className = 'badge badge-green'; badge.innerHTML = '<i class="fa-solid fa-circle" style="font-size:.45rem;"></i> Active';
       btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause Mining';
@@ -2357,6 +2560,13 @@
 
   function renderHourlyClaim() {
     const el = document.getElementById('hourlyClaimCard'); if (!el || !currentUser) return;
+    if (currentUser.frozen) {
+      el.className = 'hourly-claim claimed';
+      el.innerHTML = '<div class="hourly-content"><div class="hourly-gift"><i class="fa-solid fa-lock"></i></div>' +
+        '<div class="hourly-text"><div class="hourly-title"><i class="fa-solid fa-ban"></i> Claims Disabled</div>' +
+          '<div class="hourly-sub">Your account is frozen. Contact support.</div></div></div>';
+      return;
+    }
     const claimUsd = getHourlyClaimUsd(currentUser); const sym = currentUser.active_coin || 'BTC';
     const coinAmount = usdToCoin(sym, claimUsd); const sym_ = currencySymbol();
     const lastClaimTs = currentUser.last_hourly_claim ? new Date(currentUser.last_hourly_claim).getTime() : 0;
@@ -2386,6 +2596,7 @@
 
   async function claimHourly() {
     if (!currentUser) return;
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     if (platformSettings && platformSettings.maintenance_mode) { toast('Maintenance mode — try later.', 'warn'); return; }
     const lastClaimTs = currentUser.last_hourly_claim ? new Date(currentUser.last_hourly_claim).getTime() : 0;
     if (now() - lastClaimTs < HOURLY_COOLDOWN_MS) { toast('Already claimed this hour.', 'warn'); return; }
@@ -2414,6 +2625,7 @@
   function renderTasks() {
     const grid = document.getElementById('tasksGrid'); const badge = document.getElementById('tasksEarnedBadge');
     if (!grid || !currentUser) return;
+    if (currentUser.frozen) { grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--red-2);font-weight:700;"><i class="fa-solid fa-lock"></i> Tasks disabled — account frozen</div>'; return; }
     const earned = currentUser.tasks_earned_usd || 0; if (badge) badge.textContent = fmtMoney(earned) + ' earned';
     const sym_ = currencySymbol();
     grid.innerHTML = TASKS.map(function(t) {
@@ -2429,7 +2641,7 @@
     }).join('');
   }
   function runTask(taskId) {
-    if (!currentUser) return;
+    if (!currentUser || currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     if (getTaskCooldownRemaining(taskId) > 0) { toast('Task on cooldown.', 'warn'); return; }
     const task = TASKS.find(function(t){ return t.id === taskId; }); if (!task) return;
     openTaskModal(task);
@@ -2486,7 +2698,7 @@
   function copySnippet(text) { if (navigator.clipboard) navigator.clipboard.writeText(text).then(function(){ toast('Copied — now paste below', 'success'); }); }
 
   async function completeTask(taskId) {
-    if (!currentUser) return;
+    if (!currentUser || currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     const task = TASKS.find(function(t){ return t.id === taskId; }); if (!task) return;
     if (getTaskCooldownRemaining(taskId) > 0) { toast('Still on cooldown.', 'warn'); return; }
     const sym = currentUser.active_coin || 'BTC';
@@ -2609,6 +2821,10 @@
 
   function renderWithdrawalCard() {
     const content = document.getElementById('withdrawalContent'); if (!content || !currentUser) return;
+    if (currentUser.frozen) {
+      content.innerHTML = '<div style="text-align:center;padding:20px;color:var(--red-2);font-weight:700;"><i class="fa-solid fa-lock" style="font-size:1.5rem;display:block;margin-bottom:8px;"></i>Withdrawals disabled — account frozen</div>';
+      return;
+    }
     const totalUsd = computeTotalAssets(currentUser);
     content.innerHTML =
       '<div style="padding:14px;background:rgba(46,229,107,.08);border:1px solid rgba(46,229,107,.3);border-radius:14px;margin-bottom:14px;">' +
@@ -2742,7 +2958,7 @@
       }
       
       if (!bound) {
-        // Educational Intro Screen (Screenshot 1)
+        // Educational Intro Screen
         content.innerHTML = 
           '<div style="text-align:center;margin-bottom:16px;">' +
             '<div style="width:60px;height:60px;margin:0 auto 14px;border-radius:16px;background:linear-gradient(135deg,#2ee56b,#5cf09a);display:flex;align-items:center;justify-content:center;color:#04130a;font-size:1.6rem;box-shadow:0 0 30px rgba(46,229,107,.5);"><i class="fa-solid fa-shield-halved"></i></div>' +
@@ -2780,7 +2996,7 @@
         '<button class="btn btn-primary btn-block btn-lg" onclick="App.withdrawNextStep2()">Continue to Review <i class="fa-solid fa-arrow-right"></i></button>' +
         '<button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="App.withdrawBack()"><i class="fa-solid fa-arrow-left"></i> Back</button>';
     } else if (withdrawContext.step === 3) {
-      // Fee Screen (Screenshot 2)
+      // Fee Screen
       const amt = withdrawContext.amount || 0; 
       const bindUsd = c.bindUsd || (sym === 'BTC' ? 2 : 1);
       const bindCoinAmount = usdToCoin(sym, bindUsd);
@@ -2905,12 +3121,10 @@
     const w = (currentUser.wallets || {})[sym];
     if (!w || !w.bound) { withdrawContext.step = 2; saveTransferDraft(); renderWithdrawStep(); return; }
     
-    // If wallet is already bound, skip to Step 4 (Review)
     withdrawContext.step = 4; saveTransferDraft(); renderWithdrawStep();
   }
   
   function withdrawNextStep2() { 
-    // Called from the educational intro or wallet verified screen to go to Step 3 (Fee screen)
     withdrawContext.step = 3; 
     saveTransferDraft(); 
     renderWithdrawStep(); 
@@ -2932,6 +3146,7 @@
 
   async function submitWithdrawal() {
     if (!currentUser || !withdrawContext) return;
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     const sym = withdrawContext.sym; const c = COINS[sym];
     const amt = withdrawContext.amount; const fee = c.withdrawFee; const netAmt = amt - fee;
     const bal = (currentUser.balances && currentUser.balances[sym]) || 0;
@@ -2961,7 +3176,7 @@
   }
 
   // ============================================================
-  // WITHDRAWAL EMAIL VERIFICATION
+  // ★ NEW: WITHDRAWAL EMAIL VERIFICATION WITH STATE RESTORE
   // ============================================================
   async function showWithdrawEmailModal(sym) {
     const modal = document.getElementById('withdrawEmailModal');
@@ -2974,11 +3189,63 @@
     window._wdEmailCode = code;
     window._wdEmailSym = sym;
 
-    content.innerHTML =
-      '<div style="text-align:center;margin-bottom:16px;">' +
+    // ★ Save email verify state so it survives a refresh
+    saveEmailVerifyState(sym, code, verifyToken);
+
+    content.innerHTML = buildWithdrawEmailContent(sym, email);
+    modal.classList.remove('hidden');
+
+    // Only send the email if we haven't already sent one recently
+    const existing = loadEmailVerifyState();
+    if (!existing || existing.sym !== sym || (now() - existing.sentAt) > 5 * 60 * 1000) {
+      try {
+        await fetch(SUPABASE_EDGE + '/send-withdraw-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+          body: JSON.stringify({
+            to: email, code: code, link: verifyLink,
+            coinAmount: fmtCoin(sym, (currentUser.balances && currentUser.balances[sym]) || 0),
+            coinSymbol: sym,
+            usdAmount: fmtMoney(coinToUsd(sym, (currentUser.balances && currentUser.balances[sym]) || 0)),
+            deviceInfo: (DEVICE.browser + ' on ' + DEVICE.os),
+            ipAddress: (currentUser.device && currentUser.device.ip) || 'unknown',
+          }),
+        });
+      } catch (e) { console.warn('send email failed', e); }
+    }
+
+    setTimeout(function() {
+      const inp = document.getElementById('withdrawEmailCodeInput');
+      if (inp) { inp.focus(); inp.addEventListener('keypress', function(e){ if (e.key==='Enter') App.submitWithdrawEmailCode(); }); }
+    }, 150);
+  }
+
+  // Restore from saved state without sending new email
+  function showWithdrawEmailModalFromState(sym, code, token) {
+    const modal = document.getElementById('withdrawEmailModal');
+    const content = document.getElementById('withdrawEmailContent');
+    const email = currentUser.email;
+
+    window._wdEmailCode = code;
+    window._wdEmailSym = sym;
+    emailVerifyState = { sym, code, token, sentAt: now() };
+
+    content.innerHTML = buildWithdrawEmailContent(sym, email, true);
+    modal.classList.remove('hidden');
+
+    setTimeout(function() {
+      const inp = document.getElementById('withdrawEmailCodeInput');
+      if (inp) { inp.focus(); inp.addEventListener('keypress', function(e){ if (e.key==='Enter') App.submitWithdrawEmailCode(); }); }
+    }, 150);
+  }
+
+  function buildWithdrawEmailContent(sym, email, fromRestore) {
+    const restoreNotice = fromRestore ? '<div class="alert alert-info" style="margin-bottom:14px;"><i class="fa-solid fa-clock-rotate-left"></i><div>We restored your verification session. Enter the code from your email (sent recently).</div></div>' : '';
+    return '<div style="text-align:center;margin-bottom:16px;">' +
         '<div style="width:70px;height:70px;margin:0 auto 14px;border-radius:20px;background:linear-gradient(135deg,#2ee56b,#5cf09a);display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:#04130a;box-shadow:0 0 30px rgba(46,229,107,.6);"><i class="fa-solid fa-shield-halved"></i></div>' +
         '<h2 style="padding:0;">Verify Ownership</h2>' +
         '<p class="subtitle" style="margin-bottom:0;">Confirm you own this account before your first ' + COINS[sym].ticker + ' withdrawal</p></div>' +
+      restoreNotice +
       '<div class="info-box"><i class="fa-solid fa-envelope"></i><div>We sent a code to <strong style="color:var(--orange-2);">' + escHtml(email) + '</strong>. Click the link OR enter the 6-digit code below.</div></div>' +
       '<div class="form-group"><label>6-digit code</label>' +
         '<input type="text" id="withdrawEmailCodeInput" placeholder="000000" maxlength="6" inputmode="numeric" style="text-align:center;font-family:JetBrains Mono,monospace;font-size:1.5rem;letter-spacing:.5em;font-weight:900;padding:16px 14px;" autocomplete="one-time-code"></div>' +
@@ -2987,27 +3254,6 @@
       '<div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);">' +
         '<div style="font-size:.78rem;color:var(--text-3);margin-bottom:8px;font-weight:600;">Didn\'t get it? Check spam, or</div>' +
         '<button class="btn btn-ghost btn-sm" onclick="App.resendWithdrawEmail()"><i class="fa-solid fa-rotate"></i> Resend email</button></div>';
-    modal.classList.remove('hidden');
-
-    try {
-      await fetch(SUPABASE_EDGE + '/send-withdraw-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-        body: JSON.stringify({
-          to: email, code: code, link: verifyLink,
-          coinAmount: fmtCoin(sym, (currentUser.balances && currentUser.balances[sym]) || 0),
-          coinSymbol: sym,
-          usdAmount: fmtMoney(coinToUsd(sym, (currentUser.balances && currentUser.balances[sym]) || 0)),
-          deviceInfo: (DEVICE.browser + ' on ' + DEVICE.os),
-          ipAddress: (currentUser.device && currentUser.device.ip) || 'unknown',
-        }),
-      });
-    } catch (e) { console.warn('send email failed', e); }
-
-    setTimeout(function() {
-      const inp = document.getElementById('withdrawEmailCodeInput');
-      if (inp) { inp.focus(); inp.addEventListener('keypress', function(e){ if (e.key==='Enter') App.submitWithdrawEmailCode(); }); }
-    }, 150);
   }
 
   function submitWithdrawEmailCode() {
@@ -3019,6 +3265,7 @@
     if (entered !== window._wdEmailCode) { errEl.textContent = 'Incorrect code.'; return; }
     const sym = window._wdEmailSym;
     window._wdEmailCode = null; window._wdEmailSym = null;
+    clearEmailVerifyState();
     completeWithdrawEmailVerification(sym);
   }
 
@@ -3053,6 +3300,7 @@
     const newToken = btoa(JSON.stringify({ u: currentUser.id, s: sym, c: newCode, t: now() })).replace(/=+$/,'');
     const newLink = location.origin + location.pathname + '?wdverify=' + newToken;
     window._wdEmailCode = newCode;
+    saveEmailVerifyState(sym, newCode, newToken);
 
     try {
       await fetch(SUPABASE_EDGE + '/send-withdraw-code', {
@@ -3225,6 +3473,7 @@
   // ============================================================
   function showBind(sym) {
     if (!currentUser) return;
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     window._bindSym = sym;
     bindStep = 1;
     const coin = COINS[sym];
@@ -3417,6 +3666,7 @@
     try {
       const d = loadTransferDraft();
       d.bind = null;
+      d.activeModal = null;
       localStorage.setItem(TRANSFER_DRAFT_KEY, JSON.stringify(d));
     } catch (e) {}
 
@@ -3578,7 +3828,7 @@
     const el = document.getElementById('dashboardAlert'); if (!el) return;
     el.innerHTML = '';
     if (currentUser.frozen) {
-      el.innerHTML += '<div class="alert alert-error"><i class="fa-solid fa-lock"></i><div><strong>Account frozen</strong> — ' + escHtml(currentUser.frozen_reason || 'contact support') + '</div></div>';
+      // Frozen banner is already rendered at the top — no duplicate needed
       return;
     }
     const pendingBinds = Object.keys(currentUser.wallets || {}).filter(function(sym) {
@@ -3609,6 +3859,7 @@
   // ============================================================
   async function showWheel() {
     if (!currentUser) { showAuth('login'); return; }
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     const today = todayKey();
     if (currentUser.last_spin_date !== today) {
       currentUser.last_spin_date = today; currentUser.spins_today = 0;
@@ -3659,6 +3910,7 @@
 
   async function spinWheel() {
     if (!currentUser || spinning) return;
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     const today = todayKey();
     if (currentUser.last_spin_date !== today) { currentUser.last_spin_date = today; currentUser.spins_today = 0; const r = await persistProfile({ last_spin_date: today, spins_today: 0 }); if (r) currentUser = r; }
     const daily = getDailySpins(currentUser);
@@ -3724,6 +3976,7 @@
 
   function openRefWheel() {
     if (!currentUser) return;
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     const spins = currentUser.referral_spins || 0;
     if (spins <= 0) { toast('No referral spins available.', 'warn'); return; }
     renderRefWheel();
@@ -3738,6 +3991,7 @@
 
   function spinReferral() {
     if (!currentUser || refSpinning) return;
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     const spins = currentUser.referral_spins || 0;
     if (spins <= 0) { toast('No referral spins available.', 'warn'); return; }
     refSpinning = true;
@@ -3796,6 +4050,7 @@
   // ============================================================
   function showPlans() {
     if (!currentUser) { showAuth('login'); return; }
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     if (!platformSettings || platformSettings.subscriptions_enabled === false) { toast('Subscriptions are temporarily disabled.', 'info'); return; }
     const content = document.getElementById('plansContent');
     const currentPlanId = currentUser.plan || 'free';
@@ -3831,6 +4086,7 @@
 
   async function subscribe(planId) {
     if (!currentUser) return;
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     const p = PLANS[planId]; if (!p) return;
     if (planId === currentUser.plan) { toast('Already on this plan.', 'info'); return; }
     if (!isPlanEnabled(planId)) { toast('This plan is currently unavailable.', 'warn'); return; }
@@ -3898,7 +4154,7 @@
     if (!senderAddr || senderAddr.length < 20) { err.textContent = 'Enter the sending wallet address.'; return; }
     const orders = currentUser.pending_orders.map(function(o) { return o.id === orderId ? Object.assign({}, o, { status:'pending_review', tx_hash:txHash, sender_addr:senderAddr, paid_at: now() }) : o; });
     const updated = await persistProfile({ pending_orders: orders }); if (updated) currentUser = updated;
-    try { const d = loadTransferDraft(); d.subscribe = null; localStorage.setItem(TRANSFER_DRAFT_KEY, JSON.stringify(d)); } catch (e) {}
+    try { const d = loadTransferDraft(); d.subscribe = null; d.activeModal = null; localStorage.setItem(TRANSFER_DRAFT_KEY, JSON.stringify(d)); } catch (e) {}
     toast('Payment submitted', 'success');
     closeSubscribe(); renderDashboard();
   }
@@ -3963,6 +4219,7 @@
   }
   function toggleMining() {
     if (!currentUser) return;
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     const next = !currentUser.mining_active;
     persistProfile({ mining_active: next, last_persist_at: now() });
     currentUser.mining_active = next;
@@ -4008,10 +4265,12 @@
     stopMiningLoop();
     if (priceRefreshInterval) { clearInterval(priceRefreshInterval); priceRefreshInterval = null; }
     if (settingsRefreshInterval) { clearInterval(settingsRefreshInterval); settingsRefreshInterval = null; }
+    if (frozenCheckInterval) { clearInterval(frozenCheckInterval); frozenCheckInterval = null; }
     if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
     if (idleWarnTimer) { clearTimeout(idleWarnTimer); idleWarnTimer = null; }
     await supabase.auth.signOut();
     currentUser = null;
+    clearEmailVerifyState();
     document.getElementById('view-dashboard').classList.add('hidden');
     document.getElementById('view-home').classList.remove('hidden');
     renderNav();
