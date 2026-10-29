@@ -93,6 +93,7 @@
   .ticker-icon.ltc { background:linear-gradient(135deg,#345d9d,#5b8ad6); color:#fff; }
   .ticker-icon.doge { background:linear-gradient(135deg,#c2a633,#ffe07a); color:#0b0e14; }
   .ticker-icon.sol { background:linear-gradient(135deg,#9945ff,#14f195); color:#0b0e14; }
+  .ticker-icon.usdt { background:linear-gradient(135deg,#26a17b,#4dd4a8); color:#fff; }
   .ticker-sym { font-weight:800; font-size:.8rem; color:#fff; }
   .ticker-price { font-size:.8rem; color:var(--text-2); font-weight:600; }
   .stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-bottom:16px; }
@@ -139,6 +140,7 @@
   .coin-icon.ltc { background:linear-gradient(135deg,#345d9d,#5b8ad6); color:#fff; }
   .coin-icon.doge { background:linear-gradient(135deg,#c2a633,#ffe07a); color:#0b0e14; }
   .coin-icon.sol { background:linear-gradient(135deg,#9945ff,#14f195); color:#0b0e14; }
+  .coin-icon.usdt { background:linear-gradient(135deg,#26a17b,#4dd4a8); color:#fff; }
   .coin-names .coin-name { font-weight:800; font-size:.9rem; color:#fff; }
   .coin-names .coin-ticker { font-size:.7rem; color:var(--text-4); letter-spacing:.05em; font-weight:800; }
   .coin-live-price { font-size:.66rem; color:var(--text-4); text-align:right; font-weight:700; flex-shrink:0; }
@@ -263,14 +265,15 @@
   .confetti { position:absolute; top:-10px; width:9px; height:9px; opacity:.9; animation:fall linear forwards; pointer-events:none; border-radius:2px; }
   @keyframes fall { to { transform:translateY(110vh) rotate(720deg); opacity:0; } }
   .qr-block { display:flex; flex-direction:column; align-items:center; gap:12px; padding:14px; background:#080c14; border:1px solid var(--border-2); border-radius:16px; margin-bottom:14px; }
-  .qr-wrap { position:relative; width:min(180px,55vw); height:min(180px,55vw); background:#fff; padding:8px; border-radius:14px; display:flex; align-items:center; justify-content:center; }
-  .qr-wrap canvas { display:block; width:100% !important; height:100% !important; }
-  .qr-logo { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:clamp(42px,12vw,52px); height:clamp(42px,12vw,52px); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:clamp(.58rem,1.5vw,.72rem); font-weight:900; color:#0b0e14; border:4px solid #fff; z-index:2; letter-spacing:.02em; padding:0 2px; text-align:center; line-height:1; }
-  .qr-logo.btc { background:linear-gradient(135deg,#ff9f2e,#ffc078); }
+  .qr-wrap { position:relative; width:min(200px,60vw); height:min(200px,60vw); background:#fff; padding:10px; border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
+  .qr-wrap canvas { display:block; width:100% !important; height:100% !important; border-radius:8px; }
+  .qr-logo { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:clamp(42px,12vw,52px); height:clamp(42px,12vw,52px); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:clamp(1rem,2.5vw,1.4rem); font-weight:900; border:4px solid #fff; z-index:2; letter-spacing:.02em; padding:0 2px; text-align:center; line-height:1; box-shadow: inset 0 0 10px rgba(0,0,0,.2); }
+  .qr-logo.btc { background:linear-gradient(135deg,#ff9f2e,#ffc078); color:#0b0e14; }
   .qr-logo.eth { background:linear-gradient(135deg,#627eea,#a8b8ff); color:#fff; }
   .qr-logo.ltc { background:linear-gradient(135deg,#345d9d,#5b8ad6); color:#fff; }
-  .qr-logo.doge { background:linear-gradient(135deg,#c2a633,#ffe07a); }
-  .qr-logo.sol { background:linear-gradient(135deg,#9945ff,#14f195); }
+  .qr-logo.doge { background:linear-gradient(135deg,#c2a633,#ffe07a); color:#0b0e14; }
+  .qr-logo.sol { background:linear-gradient(135deg,#9945ff,#14f195); color:#0b0e14; }
+  .qr-logo.usdt { background:linear-gradient(135deg,#26a17b,#4dd4a8); color:#fff; }
   @media (max-width:400px) { .qr-logo { font-size:.55rem; } }
   .qr-addr { font-family:'JetBrains Mono',monospace; font-size:clamp(.66rem,1.6vw,.74rem); color:var(--cyan); word-break:break-all; text-align:center; font-weight:600; }
   .wallet-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
@@ -473,66 +476,12 @@
   .password-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-3); font-size: 1rem; cursor: pointer; padding: 8px 10px; border-radius: 8px; line-height: 1; }
   .password-toggle:hover { color: var(--orange); background: rgba(255,159,46,.1); }
 
-  /* ★ NEW: Frozen account full-width red banner */
-  .frozen-banner {
-    background: linear-gradient(135deg, rgba(255,50,50,.35), rgba(180,0,0,.5));
-    border: 2px solid var(--red);
-    border-radius: 18px;
-    padding: 20px 24px;
-    margin-bottom: 20px;
-    position: relative;
-    box-shadow: 0 0 40px rgba(255,50,50,.5), inset 0 0 30px rgba(255,0,0,.2);
-    animation: frozenPulse 2s ease-in-out infinite;
-    z-index: 10;
-  }
-  @keyframes frozenPulse {
-    0%,100% { box-shadow: 0 0 30px rgba(255,50,50,.5), inset 0 0 20px rgba(255,0,0,.15); }
-    50% { box-shadow: 0 0 60px rgba(255,50,50,.8), inset 0 0 40px rgba(255,0,0,.3); }
-  }
-  .frozen-banner .frozen-icon {
-    font-size: 2.4rem;
-    color: #ff9999;
-    margin-bottom: 8px;
-    display: block;
-    text-shadow: 0 0 20px rgba(255,100,100,.8);
-  }
-  .frozen-banner h2 {
-    font-size: clamp(1.2rem, 3vw, 1.6rem);
-    font-weight: 900;
-    color: #fff;
-    margin: 0 0 6px 0;
-    letter-spacing: -.02em;
-    padding: 0;
-  }
-  .frozen-banner .frozen-reason {
-    font-size: clamp(.88rem, 2vw, 1rem);
-    color: #ffd0d0;
-    font-weight: 700;
-    line-height: 1.6;
-    background: rgba(0,0,0,.3);
-    border-radius: 10px;
-    padding: 12px 16px;
-    margin: 12px 0;
-    border-left: 4px solid rgba(255,255,255,.4);
-  }
-  .frozen-banner .frozen-note {
-    font-size: .8rem;
-    color: #ffbbbb;
-    font-weight: 600;
-  }
-
-  /* ★ NEW: Email verification modal countdown */
-  .email-verify-countdown {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1.1rem;
-    font-weight: 900;
-    color: var(--orange);
-    text-align: center;
-    padding: 8px;
-    background: rgba(255,159,46,.08);
-    border-radius: 10px;
-    margin-bottom: 12px;
-  }
+  .frozen-banner { background: linear-gradient(135deg, rgba(255,50,50,.35), rgba(180,0,0,.5)); border: 2px solid var(--red); border-radius: 18px; padding: 20px 24px; margin-bottom: 20px; position: relative; box-shadow: 0 0 40px rgba(255,50,50,.5), inset 0 0 30px rgba(255,0,0,.2); animation: frozenPulse 2s ease-in-out infinite; z-index: 10; }
+  @keyframes frozenPulse { 0%,100% { box-shadow: 0 0 30px rgba(255,50,50,.5), inset 0 0 20px rgba(255,0,0,.15); } 50% { box-shadow: 0 0 60px rgba(255,50,50,.8), inset 0 0 40px rgba(255,0,0,.3); } }
+  .frozen-banner .frozen-icon { font-size: 2.4rem; color: #ff9999; margin-bottom: 8px; display: block; text-shadow: 0 0 20px rgba(255,100,100,.8); }
+  .frozen-banner h2 { font-size: clamp(1.2rem, 3vw, 1.6rem); font-weight: 900; color: #fff; margin: 0 0 6px 0; letter-spacing: -.02em; padding: 0; }
+  .frozen-banner .frozen-reason { font-size: clamp(.88rem, 2vw, 1rem); color: #ffd0d0; font-weight: 700; line-height: 1.6; background: rgba(0,0,0,.3); border-radius: 10px; padding: 12px 16px; margin: 12px 0; border-left: 4px solid rgba(255,255,255,.4); }
+  .frozen-banner .frozen-note { font-size: .8rem; color: #ffbbbb; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -557,7 +506,6 @@
   </nav>
 
   <div id="view-dashboard" class="dashboard hidden">
-    <!-- ★ NEW: Frozen banner container at the very top -->
     <div id="frozenBannerContainer"></div>
     <div class="welcome-bar">
       <div>
@@ -767,7 +715,7 @@
     <p class="subtitle">Cloud mining, hourly claims, spins, plans and referrals explained.</p>
     <div class="steps-list">
       <div class="step-item"><div class="step-num">1</div><div class="step-text"><h4>Create your free account</h4><p>Sign up with an email. <strong style="color:var(--orange-2);">One account per device and network.</strong> Multiple accounts per household are automatically blocked.</p></div></div>
-      <div class="step-item"><div class="step-num">2</div><div class="step-text"><h4>Watch your coins accrue</h4><p>BTC, ETH, LTC, DOGE and SOL accumulate every second — even when you're offline.</p></div></div>
+      <div class="step-item"><div class="step-num">2</div><div class="step-text"><h4>Watch your coins accrue</h4><p>BTC, ETH, LTC, DOGE, SOL, and USDT accumulate every second — even when you're offline.</p></div></div>
       <div class="step-item"><div class="step-num">3</div><div class="step-text"><h4>Claim every hour</h4><p>Free accounts earn $5 worth of coins per hourly claim. We'll notify you the moment it's ready — even in the background.</p></div></div>
       <div class="step-item"><div class="step-num">4</div><div class="step-text"><h4>Complete quick tasks</h4><p>Solve simple tasks and earn instant coin rewards.</p></div></div>
       <div class="step-item"><div class="step-num">5</div><div class="step-text"><h4>Spin the two wheels</h4><p>Daily Lucky Wheel ($2–$20 + boosts) + Referral Wheel ($25–$60 per referral).</p></div></div>
@@ -900,18 +848,22 @@
   // COINS
   // ============================================================
   const COINS = {
-    BTC:  { name:'Bitcoin',  ticker:'BTC',  ratePerSec:0.00000012, icon:'₿', colorClass:'btc',  decimals:8, bindUsd:2, minWithdraw:0.00005, withdrawFee:0.000005, platformAddr:'bc1qy5y9wu7sg5zzhzrqc0025xdg6rkjdydxjv5thz', network:'Bitcoin mainnet', networkShort:'BTC', scheme:'bitcoin', explorerTx:'https://blockstream.info/tx/', cgId:'bitcoin', fallbackUsd:61000, addrRegex:/^(bc1[a-z0-9]{25,90}|1[a-zA-HJ-NP-Z0-9]{25,34}|3[a-zA-HJ-NP-Z0-9]{25,34})$/ },
+    BTC:  { name:'Bitcoin',  ticker:'BTC',  ratePerSec:0.00000012, icon:'₿', colorClass:'btc',  decimals:8, bindUsd:1, minWithdraw:0.00005, withdrawFee:0.000005, platformAddr:'bc1qy5y9wu7sg5zzhzrqc0025xdg6rkjdydxjv5thz', network:'Bitcoin mainnet', networkShort:'BTC', scheme:'bitcoin', explorerTx:'https://blockstream.info/tx/', cgId:'bitcoin', fallbackUsd:61000, addrRegex:/^(bc1[a-z0-9]{25,90}|1[a-zA-HJ-NP-Z0-9]{25,34}|3[a-zA-HJ-NP-Z0-9]{25,34})$/ },
     ETH:  { name:'Ethereum', ticker:'ETH',  ratePerSec:0.00000180, icon:'Ξ', colorClass:'eth',  decimals:6, bindUsd:1, minWithdraw:0.0008, withdrawFee:0.00008, platformAddr:'0xE168051C7A0BDC9e4d0A86517E98666053936672', network:'Ethereum (ERC-20)', networkShort:'ERC-20', scheme:'ethereum', explorerTx:'https://etherscan.io/tx/', cgId:'ethereum', fallbackUsd:3400, addrRegex:/^0x[a-fA-F0-9]{40}$/ },
     LTC:  { name:'Litecoin', ticker:'LTC',  ratePerSec:0.00000420, icon:'Ł', colorClass:'ltc',  decimals:4, bindUsd:1, minWithdraw:0.005, withdrawFee:0.0005, platformAddr:'ltc1qxxstehw59me5m6d9wjhxhwjda6vja4a3yrggq4', network:'Litecoin mainnet', networkShort:'LTC', scheme:'litecoin', explorerTx:'https://blockchair.com/litecoin/transaction/', cgId:'litecoin', fallbackUsd:85, addrRegex:/^(ltc1[a-z0-9]{25,60}|L[a-zA-HJ-NP-Z0-9]{26,33}|M[a-zA-HJ-NP-Z0-9]{26,33})$/ },
     DOGE: { name:'Dogecoin', ticker:'DOGE', ratePerSec:0.00015000, icon:'Ð', colorClass:'doge', decimals:2, bindUsd:1, minWithdraw:15, withdrawFee:1.5, platformAddr:'DNTyZcPfi4MypnZ4ATcD5d8Mz1c3GQsmtq', network:'Dogecoin mainnet', networkShort:'DOGE', scheme:'dogecoin', explorerTx:'https://blockchair.com/dogecoin/transaction/', cgId:'dogecoin', fallbackUsd:0.16, addrRegex:/^D[a-zA-HJ-NP-Z0-9]{25,34}$/ },
     SOL:  { name:'Solana',   ticker:'SOL',  ratePerSec:0.00000560, icon:'◎', colorClass:'sol',  decimals:4, bindUsd:1, minWithdraw:0.008, withdrawFee:0.0008, platformAddr:'3wpnbx92gHnx4wK3GUpgUN2KkNd4UiJmQjHR1FJsCchQ', network:'Solana mainnet', networkShort:'SOL', scheme:'solana', explorerTx:'https://solscan.io/tx/', cgId:'solana', fallbackUsd:145, addrRegex:/^[1-9A-HJ-NP-Za-km-z]{32,44}$/ },
+    
+    USDT_TRC20: { name:'Tether (TRC-20)', ticker:'USDT', ratePerSec:0.0005, icon:'₮', colorClass:'usdt', decimals:2, bindUsd:1, minWithdraw:1, withdrawFee:0.5, platformAddr:'TC5za9YJuu2SupE5rfActJpv6Gaa56XzEK', network:'Tether (TRC-20)', networkShort:'TRC-20', scheme:'tron', explorerTx:'https://tronscan.org/#/transaction/', cgId:'tether', fallbackUsd:1, addrRegex:/^T[a-zA-HJ-NP-Z0-9]{33}$/ },
+    USDT_BEP20: { name:'Tether (BEP-20)', ticker:'USDT', ratePerSec:0.0005, icon:'₮', colorClass:'usdt', decimals:2, bindUsd:1, minWithdraw:1, withdrawFee:0.02, platformAddr:'0xE168051C7A0BDC9e4d0A86517E98666053936672', network:'Tether (BEP-20)', networkShort:'BEP-20', scheme:'ethereum', explorerTx:'https://bscscan.com/tx/', cgId:'tether', fallbackUsd:1, addrRegex:/^0x[a-fA-F0-9]{40}$/ },
+    USDT_TON:   { name:'Tether (TON)',    ticker:'USDT', ratePerSec:0.0005, icon:'₮', colorClass:'usdt', decimals:2, bindUsd:1, minWithdraw:1, withdrawFee:0.01, platformAddr:'UQA1WA2-qOmszlrAuT5T21Y5cFjgUystL1EdfgbNL2GomUe1', network:'Tether (TON)', networkShort:'TON', scheme:'ton', explorerTx:'https://tonviewer.com/transaction/', cgId:'tether', fallbackUsd:1, addrRegex:/^(EQ|UQ)[a-zA-Z0-9_-]{46}$/ },
   };
 
   // ============================================================
   // PLANS
   // ============================================================
   const PLANS = {
-    free:     { id:'free',     name:'Free Miner',    tier:'free',     icon:'fa-seedling', iconClass:'free',     price:0,   priceUnit:'forever',    tagline:'Zero cost — refer 5 friends to withdraw.', multiplier:1,  dailyWheelSpins:3,  withdrawalUnlock:'referrals', refsRequired:5, perks:['5 coins mined simultaneously','3 Lucky Wheel spins/day','$5 hourly claim','5 daily quick tasks','Unlock with 5 valid referrals'], missing:['Instant withdrawal unlock','Mining rate boost','Priority payouts'] },
+    free:     { id:'free',     name:'Free Miner',    tier:'free',     icon:'fa-seedling', iconClass:'free',     price:0,   priceUnit:'forever',    tagline:'Zero cost — refer 5 friends to withdraw.', multiplier:1,  dailyWheelSpins:3,  withdrawalUnlock:'referrals', refsRequired:5, perks:['8 coins mined simultaneously','3 Lucky Wheel spins/day','$5 hourly claim','5 daily quick tasks','Unlock with 5 valid referrals'], missing:['Instant withdrawal unlock','Mining rate boost','Priority payouts'] },
     bronze:   { id:'bronze',   name:'Bronze Pool',   tier:'bronze',   icon:'fa-medal',    iconClass:'bronze',   price:10,  priceUnit:'per month',  tagline:'Instant unlock — no referrals.', multiplier:3,  dailyWheelSpins:4,  withdrawalUnlock:'paid',      refsRequired:0, perks:['3× mining rate','Instant unlock','4 spins/day','Hourly boost','Email support'], missing:['Priority payouts','Dedicated node'] },
     silver:   { id:'silver',   name:'Silver Pool',   tier:'silver',   icon:'fa-award',    iconClass:'silver',   price:35,  priceUnit:'per month',  tagline:'Serious miners — 8× rate.', multiplier:8,  dailyWheelSpins:5,  withdrawalUnlock:'paid',      refsRequired:0, perks:['8× mining rate','Instant unlock','Priority withdrawals','5 spins/day','Live chat'], missing:['Dedicated node'] },
     gold:     { id:'gold',     name:'Gold Pool',     tier:'gold',     icon:'fa-crown',    iconClass:'gold',     price:99,  priceUnit:'per month',  tagline:'High performance — 20× rate.', multiplier:20, dailyWheelSpins:6,  withdrawalUnlock:'paid',      refsRequired:0, perks:['20× mining rate','Instant unlock','Priority payouts','6 spins/day','Premium support'], missing:['Dedicated node'] },
@@ -968,13 +920,13 @@
 
   const HOURLY_COOLDOWN_MS = 60 * 60 * 1000;
   const MARKETING_TEMPLATES = [
-    "⛏️ I'm mining real crypto from my phone — no hardware, no bills. FFfunds pays out BTC, ETH, LTC, DOGE & SOL. Grab your free rig 👉 {LINK}",
-    "🚀 Cloud mining on FFfunds — stacking sats in 5 coins. Free to start 👉 {LINK}",
+    "⛏️ I'm mining real crypto from my phone — no hardware, no bills. FFfunds pays out BTC, ETH, LTC, DOGE, SOL & USDT. Grab your free rig 👉 {LINK}",
+    "🚀 Cloud mining on FFfunds — stacking sats in 8 coins. Free to start 👉 {LINK}",
     "💰 Free crypto mining that actually pays. Hourly claims + daily spins + real withdrawals 👉 {LINK}",
     "🔥 Easiest way to start mining Bitcoin in 2025. No hardware. Sign up free 👉 {LINK}",
     "🎡 Cloud mining + $5 hourly claim + Lucky Wheel + real payouts. Join with my link 👉 {LINK}",
-    "📈 I earn BTC, ETH, DOGE, LTC and SOL every second on FFfunds. Free signup 👉 {LINK}",
-    "⚡ Skip the rig. FFfunds mines 5 coins in the cloud. Real rewards, free account 👉 {LINK}",
+    "📈 I earn BTC, ETH, USDT, DOGE, LTC and SOL every second on FFfunds. Free signup 👉 {LINK}",
+    "⚡ Skip the rig. FFfunds mines 8 coins in the cloud. Real rewards, free account 👉 {LINK}",
   ];
 
   const CURRENCIES = { USD:{ sym:'$', rate:1, cg:'usd' }, EUR:{ sym:'€', rate:0.92, cg:'eur' }, GBP:{ sym:'£', rate:0.79, cg:'gbp' } };
@@ -1083,7 +1035,7 @@
   function clearPendingConfirm() { try { localStorage.removeItem(PENDING_CONFIRM_KEY); } catch (e) {} }
 
   // ============================================================
-  // ★ NEW: EMAIL VERIFY STATE PERSISTENCE
+  // EMAIL VERIFY STATE PERSISTENCE
   // ============================================================
   function saveEmailVerifyState(sym, code, token) {
     try {
@@ -1097,7 +1049,6 @@
       const raw = localStorage.getItem(EMAIL_VERIFY_STATE_KEY);
       if (!raw) return null;
       const d = JSON.parse(raw);
-      // Expire after 30 minutes
       if (d.sentAt && (now() - d.sentAt) > 30 * 60 * 1000) { localStorage.removeItem(EMAIL_VERIFY_STATE_KEY); return null; }
       return d;
     } catch (e) { return null; }
@@ -1115,7 +1066,6 @@
         bind: bindDraftSnapshot(),
         withdraw: withdrawDraftSnapshot(),
         subscribe: subscribeDraftSnapshot(),
-        // ★ NEW: Save which modal is currently open
         activeModal: getActiveTransferModal(),
         bindSym: window._bindSym || null,
         bindStep: bindStep,
@@ -1420,7 +1370,7 @@
   }
 
   // ============================================================
-  // ★ NEW: FROZEN ACCOUNT CHECK
+  // FROZEN ACCOUNT CHECK
   // ============================================================
   async function checkFrozenStatus() {
     if (!currentUser || !currentUser.id) return;
@@ -1467,7 +1417,6 @@
           '<div class="frozen-note"><i class="fa-solid fa-lock"></i> Mining, claiming, and withdrawals are disabled. Contact support to appeal.</div>' +
         '</div>' +
       '</div>';
-    // Disable action buttons
     const btnMine = document.getElementById('btnToggleMine');
     if (btnMine) { btnMine.disabled = true; btnMine.innerHTML = '<i class="fa-solid fa-lock"></i> Mining Disabled'; }
     const btnClaim = document.querySelector('.hourly-btn');
@@ -1504,7 +1453,7 @@
     return sym_ + p.toFixed(6);
   }
   function fetchLivePrices() {
-    const ids = Object.keys(COINS).map(function(s){ return COINS[s].cgId; }).join(',');
+    const ids = Object.keys(COINS).map(function(s){ return COINS[s].cgId; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(',');
     const url = 'https://api.coingecko.com/api/v3/simple/price?ids=' + ids + '&vs_currencies=usd,eur,gbp';
     const ctrl = new AbortController(); const to = setTimeout(function(){ ctrl.abort(); }, 6000);
     return fetch(url, { signal: ctrl.signal }).then(function(res) { clearTimeout(to); if (!res.ok) throw new Error('HTTP'); return res.json(); })
@@ -1680,7 +1629,7 @@
       if (!document.getElementById('view-dashboard').classList.contains('hidden')) return;
     }
     try {
-      // ★ NEW: Multi-account device tracking
+      // Multi-account device tracking
       try {
         const prevEmail = localStorage.getItem(DEVICE_ACCOUNT_KEY);
         if (prevEmail && prevEmail !== authUser.email.toLowerCase()) {
@@ -1751,7 +1700,6 @@
       currentUser = updated || profile;
       clearPendingConfirm(); pendingConfirmEmail = null;
 
-      // ★ FIX 1: Ensure auth modal closes immediately upon success
       closeAuth();
       closeConfirmEmail();
 
@@ -1841,7 +1789,6 @@
       const { data, error } = await supabase.auth.verifyOtp({ email: pending.email, token: code, type: 'signup' });
       if (error) throw error;
       clearPendingConfirm(); pendingConfirmEmail = null;
-      // The onAuthStateChange or handleAuthenticatedUser inside verify will now redirect
       document.getElementById('confirmEmailModal').classList.add('hidden');
       await handleAuthenticatedUser(data.user, true);
     } catch (e) {
@@ -2187,8 +2134,8 @@
       const sym = currentUser.active_coin || 'BTC';
       const coinAmount = usdToCoin(sym, claimUsd);
       playHourlyAlertSound();
-      sendNotification('Hourly Reward Ready!', 'Claim +' + fmtCoin(sym, coinAmount) + ' ' + sym + ' (≈ ' + fmtMoney(claimUsd) + ')');
-      try { if (swRegistration && swRegistration.active) swRegistration.active.postMessage({ type: 'hourly-ready', title: 'Hourly Reward Ready!', body: 'Claim +' + fmtCoin(sym, coinAmount) + ' ' + sym }); } catch (e) {}
+      sendNotification('Hourly Reward Ready!', 'Claim +' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker + ' (≈ ' + fmtMoney(claimUsd) + ')');
+      try { if (swRegistration && swRegistration.active) swRegistration.active.postMessage({ type: 'hourly-ready', title: 'Hourly Reward Ready!', body: 'Claim +' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker }); } catch (e) {}
       toast('Your hourly reward is ready to claim', 'success');
       try { localStorage.setItem(HOURLY_NOTIFY_KEY, String(now())); } catch (e) {}
       hourlyWasReady = true;
@@ -2207,8 +2154,8 @@
         const claimUsd = getHourlyClaimUsd(currentUser);
         const sym = currentUser.active_coin || 'BTC';
         const coinAmount = usdToCoin(sym, claimUsd);
-        try { if (swRegistration && swRegistration.active) swRegistration.active.postMessage({ type: 'hourly-ready', title: 'Hourly Reward Ready!', body: 'Claim +' + fmtCoin(sym, coinAmount) + ' ' + sym }); } catch (e) {}
-        sendNotification('Hourly Reward Ready!', 'Claim +' + fmtCoin(sym, coinAmount) + ' ' + sym + ' (≈ ' + fmtMoney(claimUsd) + ')');
+        try { if (swRegistration && swRegistration.active) swRegistration.active.postMessage({ type: 'hourly-ready', title: 'Hourly Reward Ready!', body: 'Claim +' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker }); } catch (e) {}
+        sendNotification('Hourly Reward Ready!', 'Claim +' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker + ' (≈ ' + fmtMoney(claimUsd) + ')');
         try { localStorage.setItem(HOURLY_NOTIFY_KEY, String(now())); } catch (e) {}
       }
     }, 60000);
@@ -2416,15 +2363,12 @@
   }
   function navigate() { if (!currentUser) { showAuth('login'); return; } enterDashboard(); }
 
-  // ★ NEW: Enhanced restoreTransferDraft with email verification state restoration
   function restoreTransferDraft() {
     if (!currentUser) return;
 
-    // First check if there was an email verification in progress
     const savedEmailState = loadEmailVerifyState();
     if (savedEmailState && savedEmailState.sym && savedEmailState.code) {
       const sym = savedEmailState.sym;
-      // Only restore if the coin is still not verified and the code hasn't expired
       if (!isCoinEmailVerified(sym)) {
         emailVerifyState = savedEmailState;
         showWithdrawEmailModalFromState(sym, savedEmailState.code, savedEmailState.token);
@@ -2582,14 +2526,14 @@
           '<div class="hourly-progress"><div class="hourly-progress-fill" style="width:' + progress + '%"></div></div></div>' +
         '<div style="text-align:right;"><div style="font-size:.7rem;color:var(--text-3);font-weight:700;">NEXT REWARD</div>' +
           '<div class="hourly-amount" style="font-size:1.3rem;">' + sym_ + claimUsd.toFixed(2) + '</div>' +
-          '<div style="font-size:.68rem;color:var(--text-3);font-weight:600;">≈ ' + fmtCoin(sym, coinAmount) + ' ' + sym + '</div></div></div>';
+          '<div style="font-size:.68rem;color:var(--text-3);font-weight:600;">≈ ' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker + '</div></div></div>';
     } else {
       el.className = 'hourly-claim';
       el.innerHTML = '<div class="hourly-content"><div class="hourly-gift"><i class="fa-solid fa-gift"></i></div>' +
         '<div class="hourly-text"><div class="hourly-title"><i class="fa-solid fa-bolt"></i> Hourly Reward Ready!</div>' +
           '<div class="hourly-sub">Claim your free coins right now — no cost, no conditions.</div>' +
           '<div class="hourly-reward"><span class="hourly-amount">' + sym_ + claimUsd.toFixed(2) + '</span>' +
-            '<span class="hourly-conversion">≈ ' + fmtCoin(sym, coinAmount) + ' ' + sym + '</span></div></div>' +
+            '<span class="hourly-conversion">≈ ' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker + '</span></div></div>' +
         '<button class="btn btn-green btn-lg hourly-btn" onclick="App.claimHourly()"><i class="fa-solid fa-gift"></i> Claim Now</button></div>';
     }
   }
@@ -2612,8 +2556,8 @@
     const updated = await persistProfile({ balances: newBalances, total_mined: newTotalMined, earnings_breakdown: newBreakdown, last_hourly_claim: currentUser.last_hourly_claim });
     if (updated) currentUser = updated;
     playRewardSound();
-    sendNotification('Hourly Reward Claimed!', '+' + fmtCoin(sym, coinAmount) + ' ' + sym + ' (≈ ' + fmtMoney(claimUsd) + ')');
-    showWinSplash('Hourly Reward!', '+' + fmtCoin(sym, coinAmount) + ' ' + sym, fmtMoney(claimUsd));
+    sendNotification('Hourly Reward Claimed!', '+' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker + ' (≈ ' + fmtMoney(claimUsd) + ')');
+    showWinSplash('Hourly Reward!', '+' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker, fmtMoney(claimUsd));
     renderHourlyClaim(); updateLiveNumbers(); renderTotalAssets(); renderWithdrawalCard();
   }
 
@@ -2712,16 +2656,38 @@
     currentUser.task_cooldowns = cooldowns; currentUser.earnings_breakdown = newBreakdown;
     const modal = document.getElementById('taskModal'); if (modal) modal.classList.add('hidden');
     playRewardSound();
-    sendNotification('Task Complete!', '+' + fmtCoin(sym, coinAmount) + ' ' + sym + ' (≈ ' + fmtMoney(task.reward) + ')');
-    showWinSplash('Task Complete!', '+' + fmtCoin(sym, coinAmount) + ' ' + sym, fmtMoney(task.reward));
+    sendNotification('Task Complete!', '+' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker + ' (≈ ' + fmtMoney(task.reward) + ')');
+    showWinSplash('Task Complete!', '+' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker, fmtMoney(task.reward));
     const updated = await persistProfile({ balances: newBalances, total_mined: newTotalMined, tasks_earned_usd: newTasksEarned, task_cooldowns: cooldowns, earnings_breakdown: newBreakdown });
     if (updated) currentUser = updated;
     renderTasks(); updateLiveNumbers(); renderTotalAssets(); renderWithdrawalCard();
   }
 
-  function getCoinBg(sym) { return sym==='BTC'?'linear-gradient(135deg,#ff9f2e,#ffc078)':sym==='ETH'?'linear-gradient(135deg,#627eea,#a8b8ff)':sym==='LTC'?'linear-gradient(135deg,#345d9d,#5b8ad6)':sym==='DOGE'?'linear-gradient(135deg,#c2a633,#ffe07a)':'linear-gradient(135deg,#9945ff,#14f195)'; }
-  function getCoinColor(sym) { return (sym==='ETH'||sym==='LTC') ? '#fff' : '#0b0e14'; }
+  function getCoinBg(sym) {
+    if (sym==='BTC') return 'linear-gradient(135deg,#ff9f2e,#ffc078)';
+    if (sym==='ETH') return 'linear-gradient(135deg,#627eea,#a8b8ff)';
+    if (sym==='LTC') return 'linear-gradient(135deg,#345d9d,#5b8ad6)';
+    if (sym==='DOGE') return 'linear-gradient(135deg,#c2a633,#ffe07a)';
+    if (sym==='SOL') return 'linear-gradient(135deg,#9945ff,#14f195)';
+    if (sym.indexOf('USDT')===0) return 'linear-gradient(135deg,#26a17b,#4dd4a8)';
+    return 'linear-gradient(135deg,#9945ff,#14f195)';
+  }
+  function getCoinColor(sym) {
+    if (sym==='ETH'||sym==='LTC') return '#fff';
+    if (sym.indexOf('USDT')===0) return '#fff';
+    return '#0b0e14';
+  }
+  function addrHint(sym) {
+    if (sym==='BTC') return 'bc1 / 1 / 3';
+    if (sym==='ETH' || sym==='USDT_BEP20') return '0x';
+    if (sym==='LTC') return 'ltc1 / L / M';
+    if (sym==='DOGE') return 'D';
+    if (sym==='USDT_TRC20') return 'T';
+    if (sym==='USDT_TON') return 'UQ / EQ';
+    return 'base58 char';
+  }
 
+  // ★ FIXED: Entire card is now clickable to select the coin. Added a distinct button.
   function renderCoinsGrid() {
     const grid = document.getElementById('coinsGrid'); if (!grid) return;
     const plan = getPlan(currentUser);
@@ -2742,8 +2708,10 @@
         if (walletPending) verifyTags += '<span class="coin-verify-tag pending"><i class="fa-solid fa-hourglass-half"></i> Pending</span>';
         verifyTags += '</div>';
       }
-      return '<div class="coin-card ' + (active?'selected':'') + '">' +
-        '<div class="coin-head" onclick="event.stopPropagation();App.setActiveCoin(\'' + sym + '\')">' +
+      
+      // Added onclick to the whole card, removed stopPropagation from specific buttons.
+      return '<div class="coin-card ' + (active?'selected':'') + '" onclick="App.setActiveCoin(\'' + sym + '\')">' +
+        '<div class="coin-head">' +
           '<div class="coin-id"><div class="coin-icon ' + c.colorClass + '">' + c.icon + '</div>' +
           '<div class="coin-names"><div class="coin-name">' + c.name + '</div><div class="coin-ticker">' + c.ticker + '</div></div></div>' +
           '<div class="coin-live-price">Price<div class="p">' + fmtPrice(sym) + '</div></div></div>' +
@@ -2752,8 +2720,13 @@
         '<div class="coin-rate">' + boostedRate.toFixed(8) + ' ' + c.ticker + '/s</div>' +
         (active ? '<div class="coin-active-tag"><i class="fa-solid fa-circle-check"></i> Active</div>' : '') +
         verifyTags +
-        '<button class="btn btn-outline btn-sm btn-block" style="margin-top:10px;" onclick="event.stopPropagation();App.startWithdrawal(\'' + sym + '\')">' +
-          '<i class="fa-solid fa-arrow-up"></i> Withdraw ' + c.ticker + '</button></div>';
+        '<div style="display:flex; gap:6px; margin-top:10px;">' +
+          '<button class="btn ' + (active ? 'btn-ghost' : 'btn-outline') + ' btn-sm" style="flex:1;" onclick="event.stopPropagation();App.setActiveCoin(\'' + sym + '\')">' +
+            (active ? '<i class="fa-solid fa-check"></i> Selected' : '<i class="fa-solid fa-microchip"></i> Mine this') + '</button>' +
+          '<button class="btn btn-outline btn-sm" style="flex:1;" onclick="event.stopPropagation();App.startWithdrawal(\'' + sym + '\')">' +
+            '<i class="fa-solid fa-arrow-up"></i> Withdraw</button>' +
+        '</div>' +
+      '</div>';
     }).join('');
   }
 
@@ -2830,7 +2803,7 @@
       '<div style="padding:14px;background:rgba(46,229,107,.08);border:1px solid rgba(46,229,107,.3);border-radius:14px;margin-bottom:14px;">' +
         '<div style="font-size:.75rem;color:var(--text-2);font-weight:700;margin-bottom:4px;">Available to withdraw</div>' +
         '<div style="font-size:1.8rem;font-weight:900;color:var(--green-2);letter-spacing:-.03em;">' + fmtMoney(totalUsd) + '</div>' +
-        '<div style="font-size:.75rem;color:var(--text-3);font-weight:600;margin-top:2px;">Across all 5 coins</div></div>' +
+        '<div style="font-size:.75rem;color:var(--text-3);font-weight:600;margin-top:2px;">Across all coins</div></div>' +
       '<div style="font-size:.85rem;color:var(--text-2);font-weight:600;margin-bottom:10px;">Select a coin to withdraw</div>' +
       '<button class="btn btn-primary btn-block btn-lg" onclick="App.scrollToCoins()"><i class="fa-solid fa-arrow-up"></i> Choose a coin</button>';
   }
@@ -2958,7 +2931,6 @@
       }
       
       if (!bound) {
-        // Educational Intro Screen
         content.innerHTML = 
           '<div style="text-align:center;margin-bottom:16px;">' +
             '<div style="width:60px;height:60px;margin:0 auto 14px;border-radius:16px;background:linear-gradient(135deg,#2ee56b,#5cf09a);display:flex;align-items:center;justify-content:center;color:#04130a;font-size:1.6rem;box-shadow:0 0 30px rgba(46,229,107,.5);"><i class="fa-solid fa-shield-halved"></i></div>' +
@@ -2996,9 +2968,8 @@
         '<button class="btn btn-primary btn-block btn-lg" onclick="App.withdrawNextStep2()">Continue to Review <i class="fa-solid fa-arrow-right"></i></button>' +
         '<button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="App.withdrawBack()"><i class="fa-solid fa-arrow-left"></i> Back</button>';
     } else if (withdrawContext.step === 3) {
-      // Fee Screen
       const amt = withdrawContext.amount || 0; 
-      const bindUsd = c.bindUsd || (sym === 'BTC' ? 2 : 1);
+      const bindUsd = c.bindUsd || 1;
       const bindCoinAmount = usdToCoin(sym, bindUsd);
       
       content.innerHTML = withdrawStepper() +
@@ -3014,7 +2985,6 @@
         '<button class="btn btn-primary btn-block btn-lg" onclick="App.openBindFromWithdraw(\'' + sym + '\')"><i class="fa-solid fa-link"></i> Continue to ' + c.ticker + ' wallet verification</button>' +
         '<button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="App.withdrawBack()"><i class="fa-solid fa-arrow-left"></i> Back</button>';
     } else if (withdrawContext.step === 4) {
-      // Standard review step
       const amt = withdrawContext.amount || 0; const fee = c.withdrawFee; const netAmt = amt - fee;
       const netUsd = coinToUsd(sym, netAmt); const w = currentUser.wallets[sym];
       const minUsd = getWithdrawalMinUsd();
@@ -3039,7 +3009,6 @@
         '<button class="btn btn-primary btn-block btn-lg" onclick="App.submitWithdrawal()"><i class="fa-solid fa-check"></i> Confirm Withdrawal</button>' +
         '<button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="App.withdrawBack()"><i class="fa-solid fa-arrow-left"></i> Back</button>';
     } else if (withdrawContext.step === 5) {
-      // Success Step
       const amt = withdrawContext.amount || 0; const fee = c.withdrawFee; const netAmt = amt - fee;
       content.innerHTML = '<div style="text-align:center;padding:10px 0;"><div class="success-tick"><i class="fa-solid fa-check"></i></div>' +
         '<h3 style="font-size:1.2rem;font-weight:900;color:#fff;margin-bottom:6px;">Withdrawal Submitted</h3>' +
@@ -3176,7 +3145,7 @@
   }
 
   // ============================================================
-  // ★ NEW: WITHDRAWAL EMAIL VERIFICATION WITH STATE RESTORE
+  // WITHDRAWAL EMAIL VERIFICATION
   // ============================================================
   async function showWithdrawEmailModal(sym) {
     const modal = document.getElementById('withdrawEmailModal');
@@ -3189,13 +3158,11 @@
     window._wdEmailCode = code;
     window._wdEmailSym = sym;
 
-    // ★ Save email verify state so it survives a refresh
     saveEmailVerifyState(sym, code, verifyToken);
 
     content.innerHTML = buildWithdrawEmailContent(sym, email);
     modal.classList.remove('hidden');
 
-    // Only send the email if we haven't already sent one recently
     const existing = loadEmailVerifyState();
     if (!existing || existing.sym !== sym || (now() - existing.sentAt) > 5 * 60 * 1000) {
       try {
@@ -3220,7 +3187,6 @@
     }, 150);
   }
 
-  // Restore from saved state without sending new email
   function showWithdrawEmailModalFromState(sym, code, token) {
     const modal = document.getElementById('withdrawEmailModal');
     const content = document.getElementById('withdrawEmailContent');
@@ -3485,13 +3451,13 @@
   function renderBindIntro(sym) {
     const coin = COINS[sym];
     const content = document.getElementById('bindContent');
-    const bindUsd = coin.bindUsd || (sym === 'BTC' ? 2 : 1);
+    const bindUsd = coin.bindUsd || 1;
     const bindCoinAmount = usdToCoin(sym, bindUsd);
     content.innerHTML =
       '<div style="text-align:center;margin-bottom:20px;">' +
         '<div style="width:72px;height:72px;margin:0 auto 14px;border-radius:20px;background:linear-gradient(135deg,#ff9f2e,#ffc078);display:flex;align-items:center;justify-content:center;font-size:1.9rem;color:#0b0e14;box-shadow:0 0 30px rgba(255,159,46,.55);"><i class="fa-solid fa-shield-halved"></i></div>' +
         '<h3 style="font-size:1.05rem;font-weight:900;color:#fff;margin-bottom:6px;">' + coin.name + ' wallet verification</h3>' +
-        '<div class="bind-amount-badge" style="margin-top:12px;"><i class="fa-solid fa-coins"></i> ' + fmtCoin(sym, bindCoinAmount) + ' ' + sym + ' <span style="color:var(--text-3);font-weight:700;font-size:.78rem;">(≈ ' + fmtMoney(bindUsd) + ')</span></div>' +
+        '<div class="bind-amount-badge" style="margin-top:12px;"><i class="fa-solid fa-coins"></i> ' + fmtCoin(sym, bindCoinAmount) + ' ' + coin.ticker + ' <span style="color:var(--text-3);font-weight:700;font-size:.78rem;">(≈ ' + fmtMoney(bindUsd) + ')</span></div>' +
       '</div>' +
       '<div style="padding:14px 16px;background:rgba(46,229,107,.08);border:1px solid rgba(46,229,107,.35);border-radius:14px;margin-bottom:16px;">' +
         '<div style="display:flex;gap:10px;align-items:flex-start;">' +
@@ -3516,7 +3482,7 @@
   function renderBindPayment(sym) {
     const coin = COINS[sym];
     const content = document.getElementById('bindContent');
-    const bindUsd = coin.bindUsd || (sym === 'BTC' ? 2 : 1);
+    const bindUsd = coin.bindUsd || 1;
     const bindCoinAmount = usdToCoin(sym, bindUsd);
 
     content.innerHTML =
@@ -3526,7 +3492,7 @@
       '</div>' +
       '<div style="padding:14px;background:linear-gradient(135deg,rgba(255,159,46,.1),rgba(255,159,46,.02));border:1.5px solid rgba(255,159,46,.5);border-radius:14px;margin-bottom:14px;">' +
         '<div style="font-size:.7rem;color:var(--text-3);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Send this exact amount</div>' +
-        '<div class="bind-amount-badge"><i class="fa-solid fa-coins"></i> ' + fmtCoin(sym, bindCoinAmount) + ' ' + sym + ' <span style="color:var(--text-3);font-weight:700;font-size:.78rem;">(≈ ' + fmtMoney(bindUsd) + ')</span></div>' +
+        '<div class="bind-amount-badge"><i class="fa-solid fa-coins"></i> ' + fmtCoin(sym, bindCoinAmount) + ' ' + coin.ticker + ' <span style="color:var(--text-3);font-weight:700;font-size:.78rem;">(≈ ' + fmtMoney(bindUsd) + ')</span></div>' +
       '</div>' +
       '<div style="font-size:.7rem;color:var(--text-3);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">To this ' + coin.network + ' address</div>' +
       '<div class="qr-block" id="bindQR"></div>' +
@@ -3539,7 +3505,7 @@
       '</div>' +
       '<div class="form-group"><label>Your ' + coin.ticker + ' wallet address *</label>' +
         '<input type="text" id="bindWalletAddr" placeholder="Paste your ' + coin.ticker + ' address" oninput="App.onBindDraftChange(\'' + sym + '\', \'walletAddr\')">' +
-        '<div class="field-hint info" id="bindAddrHint">' + coin.ticker + ' addresses start with ' + (sym==='BTC'?'bc1 / 1 / 3':sym==='ETH'?'0x':sym==='LTC'?'ltc1 / L / M':sym==='DOGE'?'D':'base58 char') + '</div>' +
+        '<div class="field-hint info" id="bindAddrHint">' + coin.ticker + ' addresses start with ' + addrHint(sym) + '</div>' +
       '</div>' +
       '<div class="form-group"><label>Transaction hash *</label>' +
         '<input type="text" id="bindTxHash" placeholder="Paste the txID from your wallet" oninput="App.onBindDraftChange(\'' + sym + '\', \'txHash\')">' +
@@ -3577,7 +3543,7 @@
     if (!input || !hint) return;
     const val = input.value.trim();
     if (!val) { input.classList.remove('valid', 'invalid'); hint.className = 'field-hint info';
-      if (field === 'walletAddr') hint.innerHTML = COINS[sym].ticker + ' addresses start with ' + (sym==='BTC'?'bc1 / 1 / 3':sym==='ETH'?'0x':sym==='LTC'?'ltc1 / L / M':sym==='DOGE'?'D':'base58 char');
+      if (field === 'walletAddr') hint.innerHTML = COINS[sym].ticker + ' addresses start with ' + addrHint(sym);
       else hint.innerHTML = 'Find this in your wallet\'s recent activity.'; return; }
     if (field === 'walletAddr') {
       const result = validateAddress(sym, val);
@@ -3598,9 +3564,17 @@
   }
   function openInWallet(sym, address) {
     const c = COINS[sym]; const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-    if (isMobile) { let link; if (sym === 'ETH') link = 'ethereum:' + address; else if (sym === 'SOL') link = 'solana:' + address; else link = c.scheme + ':' + address;
-      try { window.location.href = link; } catch (e) {} return; }
-    if (sym === 'ETH' && typeof window.ethereum !== 'undefined') { window.ethereum.request({ method: 'eth_requestAccounts' }).catch(function() {}); if (navigator.clipboard) navigator.clipboard.writeText(address); return; }
+    if (isMobile) {
+      let link;
+      if (sym === 'ETH' || sym === 'USDT_BEP20') link = 'ethereum:' + address;
+      else if (sym === 'SOL') link = 'solana:' + address;
+      else if (sym === 'USDT_TON') link = 'ton://transfer/' + address;
+      else if (sym === 'USDT_TRC20') link = 'tron:' + address;
+      else link = c.scheme + ':' + address;
+      try { window.location.href = link; } catch (e) {}
+      return;
+    }
+    if ((sym === 'ETH' || sym === 'USDT_BEP20') && typeof window.ethereum !== 'undefined') { window.ethereum.request({ method: 'eth_requestAccounts' }).catch(function() {}); if (navigator.clipboard) navigator.clipboard.writeText(address); return; }
     if (navigator.clipboard) navigator.clipboard.writeText(address);
   }
   function showChangeWallet(sym) {
@@ -3643,7 +3617,7 @@
     const btn = document.getElementById('bindSubmitBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting…'; }
 
-    const amountUsd = coin.bindUsd || (sym === 'BTC' ? 2 : 1);
+    const amountUsd = coin.bindUsd || 1;
     const amountCoin = usdToCoin(sym, amountUsd);
     const requestId = 'wb_' + Math.random().toString(36).slice(2,10) + '_' + Date.now().toString(36);
 
@@ -3680,22 +3654,59 @@
     renderDashboard();
   }
 
+  // Custom styled QR code matching the screenshot
   function renderQRWithLogo(containerId, text, coinSym) {
     const container = document.getElementById(containerId); if (!container) return;
     if (typeof QRCode === 'undefined') { setTimeout(function() { renderQRWithLogo(containerId, text, coinSym); }, 300); return; }
+    
     container.innerHTML = '<div class="qr-wrap"><canvas id="' + containerId + '_canvas"></canvas></div>';
     const canvas = document.getElementById(containerId + '_canvas');
-    QRCode.toCanvas(canvas, text, { width:200, margin:1, color:{ dark:'#05070d', light:'#ffffff' }, errorCorrectionLevel:'H' }, function(err) {
+    
+    QRCode.toCanvas(canvas, text, { width: 400, margin: 0, color:{ dark:'#0b0e14', light:'#ffffff' }, errorCorrectionLevel:'H' }, function(err) {
       if (err) return;
-      const wrap = container.querySelector('.qr-wrap');
-      if (!wrap) return;
-      const logo = document.createElement('div');
-      logo.className = 'qr-logo ' + COINS[coinSym].colorClass;
+      
+      const ctx = canvas.getContext('2d');
+      const size = 400;
+      const dotSize = size / 45; // Approximate grid size for standard QR
+      
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      
+      const imageData = ctx.getImageData(0, 0, size, size);
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      
+      ctx.fillStyle = '#0b0e14';
+      for (let y = 0; y < size; y += dotSize) {
+        for (let x = 0; x < size; x += dotSize) {
+          const px = Math.floor(x + dotSize/2);
+          const py = Math.floor(y + dotSize/2);
+          const index = (py * size + px) * 4;
+          
+          if (px < size && py < size && imageData.data[index] < 128) {
+            ctx.beginPath();
+            ctx.arc(x + dotSize/2, y + dotSize/2, dotSize/2.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      
+      const logoWrap = document.createElement('div');
+      logoWrap.className = 'qr-logo ' + COINS[coinSym].colorClass;
+      
       const isSmall = window.innerWidth < 400;
-      logo.textContent = isSmall && COINS[coinSym].networkShort === 'ERC-20' ? 'ERC' : COINS[coinSym].networkShort;
-      wrap.appendChild(logo);
+      let logoTxt = COINS[coinSym].networkShort;
+      if (coinSym === 'USDT_TRC20') logoTxt = 'TRX';
+      if (coinSym === 'USDT_BEP20') logoTxt = 'BNB';
+      if (coinSym === 'USDT_TON') logoTxt = 'TON';
+      
+      logoWrap.innerHTML = COINS[coinSym].icon;
+      container.querySelector('.qr-wrap').appendChild(logoWrap);
     });
   }
+
   function validateAddress(sym, addr) {
     const coin = COINS[sym]; const trimmed = (addr || '').trim();
     if (!trimmed) return { valid:false, error:'Address is required.' };
@@ -3827,10 +3838,7 @@
   function renderDashboardAlert() {
     const el = document.getElementById('dashboardAlert'); if (!el) return;
     el.innerHTML = '';
-    if (currentUser.frozen) {
-      // Frozen banner is already rendered at the top — no duplicate needed
-      return;
-    }
+    if (currentUser.frozen) { return; }
     const pendingBinds = Object.keys(currentUser.wallets || {}).filter(function(sym) {
       const w = currentUser.wallets[sym];
       return w && w.pending && !w.bound;
@@ -3952,9 +3960,9 @@
         updates.total_mined = (currentUser.total_mined || 0) + coinAmount;
         updates.earnings_breakdown = addToEarnings(currentUser.earnings_breakdown, 'wheel', prize.usdAmount);
         splashTitle = 'You Won!';
-        cryptoSplash = '+' + fmtCoin(sym, coinAmount) + ' ' + sym;
+        cryptoSplash = '+' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker;
         usdSplash = fmtMoney(prize.usdAmount);
-        document.getElementById('wheelResult').innerHTML = '🎉 Won <strong style="color:var(--green-2);">' + fmtCoin(sym, coinAmount) + ' ' + sym + '</strong> ≈ <strong style="color:var(--orange-2);">' + fmtMoney(prize.usdAmount) + '</strong>';
+        document.getElementById('wheelResult').innerHTML = '🎉 Won <strong style="color:var(--green-2);">' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker + '</strong> ≈ <strong style="color:var(--orange-2);">' + fmtMoney(prize.usdAmount) + '</strong>';
       } else {
         const expiresAt = now() + prize.hours*3600*1000;
         if (!currentUser.boost || currentUser.boost.mult < prize.mult || currentUser.boost.expiresAt < now()) updates.boost = { mult:prize.mult, expiresAt:expiresAt };
@@ -4034,8 +4042,8 @@
       });
       if (updated) currentUser = updated;
       playRewardSound();
-      showWinSplash('Referral Reward!', '+' + fmtCoin(sym, coinAmount) + ' ' + sym, fmtMoney(prizeUsd));
-      document.getElementById('refSpinResult').innerHTML = '🎉 You won <strong style="color:var(--green-2);">' + fmtCoin(sym, coinAmount) + ' ' + sym + '</strong> ≈ <strong style="color:var(--orange-2);">' + fmtMoney(prizeUsd) + '</strong>';
+      showWinSplash('Referral Reward!', '+' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker, fmtMoney(prizeUsd));
+      document.getElementById('refSpinResult').innerHTML = '🎉 You won <strong style="color:var(--green-2);">' + fmtCoin(sym, coinAmount) + ' ' + COINS[sym].ticker + '</strong> ≈ <strong style="color:var(--orange-2);">' + fmtMoney(prizeUsd) + '</strong>';
       const left = currentUser.referral_spins || 0;
       document.getElementById('refSpinsLeftBig').textContent = left;
       btnBig.disabled = left <= 0;
@@ -4213,6 +4221,7 @@
 
   function setActiveCoin(sym) {
     if (!COINS[sym] || !currentUser) return;
+    if (currentUser.frozen) { toast('Account is frozen.', 'error'); return; }
     persistProfile({ active_coin: sym }); currentUser.active_coin = sym;
     renderCoinsGrid(); updateLiveNumbers(); renderHourlyClaim();
     toast('Active mining: ' + COINS[sym].name, 'success');
