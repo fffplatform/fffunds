@@ -267,7 +267,7 @@
   .qr-block { display:flex; flex-direction:column; align-items:center; gap:12px; padding:14px; background:#080c14; border:1px solid var(--border-2); border-radius:16px; margin-bottom:14px; }
   .qr-wrap { position:relative; width:min(200px,60vw); height:min(200px,60vw); background:#fff; padding:10px; border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
   .qr-wrap canvas { display:block; width:100% !important; height:100% !important; border-radius:8px; }
-  .qr-logo { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:clamp(42px,12vw,52px); height:clamp(42px,12vw,52px); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:clamp(1rem,2.5vw,1.4rem); font-weight:900; border:4px solid #fff; z-index:2; letter-spacing:.02em; padding:0 2px; text-align:center; line-height:1; box-shadow: inset 0 0 10px rgba(0,0,0,.2); }
+  .qr-logo { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:clamp(42px,12vw,52px); height:clamp(42px,12vw,52px); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:clamp(.58rem,1.5vw,.72rem); font-weight:900; border:4px solid #fff; z-index:2; letter-spacing:.02em; padding:0 2px; text-align:center; line-height:1; box-shadow: inset 0 0 10px rgba(0,0,0,.2); }
   .qr-logo.btc { background:linear-gradient(135deg,#ff9f2e,#ffc078); color:#0b0e14; }
   .qr-logo.eth { background:linear-gradient(135deg,#627eea,#a8b8ff); color:#fff; }
   .qr-logo.ltc { background:linear-gradient(135deg,#345d9d,#5b8ad6); color:#fff; }
@@ -854,6 +854,7 @@
     DOGE: { name:'Dogecoin', ticker:'DOGE', ratePerSec:0.00015000, icon:'Ð', colorClass:'doge', decimals:2, bindUsd:1, minWithdraw:15, withdrawFee:1.5, platformAddr:'DNTyZcPfi4MypnZ4ATcD5d8Mz1c3GQsmtq', network:'Dogecoin mainnet', networkShort:'DOGE', scheme:'dogecoin', explorerTx:'https://blockchair.com/dogecoin/transaction/', cgId:'dogecoin', fallbackUsd:0.16, addrRegex:/^D[a-zA-HJ-NP-Z0-9]{25,34}$/ },
     SOL:  { name:'Solana',   ticker:'SOL',  ratePerSec:0.00000560, icon:'◎', colorClass:'sol',  decimals:4, bindUsd:1, minWithdraw:0.008, withdrawFee:0.0008, platformAddr:'3wpnbx92gHnx4wK3GUpgUN2KkNd4UiJmQjHR1FJsCchQ', network:'Solana mainnet', networkShort:'SOL', scheme:'solana', explorerTx:'https://solscan.io/tx/', cgId:'solana', fallbackUsd:145, addrRegex:/^[1-9A-HJ-NP-Za-km-z]{32,44}$/ },
     
+    // USDT on 3 Networks
     USDT_TRC20: { name:'Tether (TRC-20)', ticker:'USDT', ratePerSec:0.0005, icon:'₮', colorClass:'usdt', decimals:2, bindUsd:1, minWithdraw:1, withdrawFee:0.5, platformAddr:'TC5za9YJuu2SupE5rfActJpv6Gaa56XzEK', network:'Tether (TRC-20)', networkShort:'TRC-20', scheme:'tron', explorerTx:'https://tronscan.org/#/transaction/', cgId:'tether', fallbackUsd:1, addrRegex:/^T[a-zA-HJ-NP-Z0-9]{33}$/ },
     USDT_BEP20: { name:'Tether (BEP-20)', ticker:'USDT', ratePerSec:0.0005, icon:'₮', colorClass:'usdt', decimals:2, bindUsd:1, minWithdraw:1, withdrawFee:0.02, platformAddr:'0xE168051C7A0BDC9e4d0A86517E98666053936672', network:'Tether (BEP-20)', networkShort:'BEP-20', scheme:'ethereum', explorerTx:'https://bscscan.com/tx/', cgId:'tether', fallbackUsd:1, addrRegex:/^0x[a-fA-F0-9]{40}$/ },
     USDT_TON:   { name:'Tether (TON)',    ticker:'USDT', ratePerSec:0.0005, icon:'₮', colorClass:'usdt', decimals:2, bindUsd:1, minWithdraw:1, withdrawFee:0.01, platformAddr:'UQA1WA2-qOmszlrAuT5T21Y5cFjgUystL1EdfgbNL2GomUe1', network:'Tether (TON)', networkShort:'TON', scheme:'ton', explorerTx:'https://tonviewer.com/transaction/', cgId:'tether', fallbackUsd:1, addrRegex:/^(EQ|UQ)[a-zA-Z0-9_-]{46}$/ },
@@ -2687,7 +2688,6 @@
     return 'base58 char';
   }
 
-  // ★ FIXED: Entire card is now clickable to select the coin. Added a distinct button.
   function renderCoinsGrid() {
     const grid = document.getElementById('coinsGrid'); if (!grid) return;
     const plan = getPlan(currentUser);
@@ -2708,10 +2708,8 @@
         if (walletPending) verifyTags += '<span class="coin-verify-tag pending"><i class="fa-solid fa-hourglass-half"></i> Pending</span>';
         verifyTags += '</div>';
       }
-      
-      // Added onclick to the whole card, removed stopPropagation from specific buttons.
-      return '<div class="coin-card ' + (active?'selected':'') + '" onclick="App.setActiveCoin(\'' + sym + '\')">' +
-        '<div class="coin-head">' +
+      return '<div class="coin-card ' + (active?'selected':'') + '">' +
+        '<div class="coin-head" onclick="event.stopPropagation();App.setActiveCoin(\'' + sym + '\')">' +
           '<div class="coin-id"><div class="coin-icon ' + c.colorClass + '">' + c.icon + '</div>' +
           '<div class="coin-names"><div class="coin-name">' + c.name + '</div><div class="coin-ticker">' + c.ticker + '</div></div></div>' +
           '<div class="coin-live-price">Price<div class="p">' + fmtPrice(sym) + '</div></div></div>' +
@@ -3151,6 +3149,8 @@
     const modal = document.getElementById('withdrawEmailModal');
     const content = document.getElementById('withdrawEmailContent');
     const email = currentUser.email;
+    
+    // Always generate a fresh code when the modal is opened for the first time
     const code = gen6Digit();
     const verifyToken = btoa(JSON.stringify({ u: currentUser.id, s: sym, c: code, t: now() })).replace(/=+$/,'');
     const verifyLink = location.origin + location.pathname + '?wdverify=' + verifyToken;
@@ -3163,23 +3163,21 @@
     content.innerHTML = buildWithdrawEmailContent(sym, email);
     modal.classList.remove('hidden');
 
-    const existing = loadEmailVerifyState();
-    if (!existing || existing.sym !== sym || (now() - existing.sentAt) > 5 * 60 * 1000) {
-      try {
-        await fetch(SUPABASE_EDGE + '/send-withdraw-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-          body: JSON.stringify({
-            to: email, code: code, link: verifyLink,
-            coinAmount: fmtCoin(sym, (currentUser.balances && currentUser.balances[sym]) || 0),
-            coinSymbol: sym,
-            usdAmount: fmtMoney(coinToUsd(sym, (currentUser.balances && currentUser.balances[sym]) || 0)),
-            deviceInfo: (DEVICE.browser + ' on ' + DEVICE.os),
-            ipAddress: (currentUser.device && currentUser.device.ip) || 'unknown',
-          }),
-        });
-      } catch (e) { console.warn('send email failed', e); }
-    }
+    // Send the email immediately
+    try {
+      await fetch(SUPABASE_EDGE + '/send-withdraw-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+        body: JSON.stringify({
+          to: email, code: code, link: verifyLink,
+          coinAmount: fmtCoin(sym, (currentUser.balances && currentUser.balances[sym]) || 0),
+          coinSymbol: sym,
+          usdAmount: fmtMoney(coinToUsd(sym, (currentUser.balances && currentUser.balances[sym]) || 0)),
+          deviceInfo: (DEVICE.browser + ' on ' + DEVICE.os),
+          ipAddress: (currentUser.device && currentUser.device.ip) || 'unknown',
+        }),
+      });
+    } catch (e) { console.warn('send email failed', e); }
 
     setTimeout(function() {
       const inp = document.getElementById('withdrawEmailCodeInput');
@@ -3219,7 +3217,7 @@
       '<button class="btn btn-green btn-block btn-lg" id="btnVerifyWithdrawEmail" onclick="App.submitWithdrawEmailCode()"><i class="fa-solid fa-check"></i> Verify</button>' +
       '<div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);">' +
         '<div style="font-size:.78rem;color:var(--text-3);margin-bottom:8px;font-weight:600;">Didn\'t get it? Check spam, or</div>' +
-        '<button class="btn btn-ghost btn-sm" onclick="App.resendWithdrawEmail()"><i class="fa-solid fa-rotate"></i> Resend email</button></div>';
+        '<button class="btn btn-ghost btn-sm" id="btnResendWithdrawEmail" onclick="App.resendWithdrawEmail(this)"><i class="fa-solid fa-rotate"></i> Resend email</button></div>';
   }
 
   function submitWithdrawEmailCode() {
@@ -3259,7 +3257,7 @@
     }
   }
 
-  async function resendWithdrawEmail() {
+  async function resendWithdrawEmail(btn) {
     const sym = window._wdEmailSym;
     if (!sym) { toast('Session expired.', 'warn'); return; }
     const newCode = gen6Digit();
@@ -3281,12 +3279,32 @@
           ipAddress: (currentUser.device && currentUser.device.ip) || 'unknown',
         }),
       });
-    } catch (e) {}
+      
+      const inp = document.getElementById('withdrawEmailCodeInput');
+      if (inp) inp.value = '';
+      const err = document.getElementById('withdrawEmailError');
+      if (err) err.textContent = '';
 
-    const inp = document.getElementById('withdrawEmailCodeInput');
-    if (inp) inp.value = '';
-    const err = document.getElementById('withdrawEmailError');
-    if (err) err.textContent = '';
+      // Start the countdown
+      if (btn) {
+        let remaining = 60;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Resend in 60s';
+        const iv = setInterval(() => {
+          remaining--;
+          if (remaining <= 0) {
+            clearInterval(iv);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Resend email';
+          } else {
+            btn.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Resend in ' + remaining + 's';
+          }
+        }, 1000);
+      }
+      toast('New code sent', 'success');
+    } catch (e) { 
+      toast('Failed to resend', 'error');
+    }
   }
 
   function closeWithdrawEmail() { document.getElementById('withdrawEmailModal').classList.add('hidden'); }
@@ -3654,14 +3672,16 @@
     renderDashboard();
   }
 
-  // Custom styled QR code matching the screenshot
+  // ★ NEW: Custom styled QR code matching the screenshot
   function renderQRWithLogo(containerId, text, coinSym) {
     const container = document.getElementById(containerId); if (!container) return;
     if (typeof QRCode === 'undefined') { setTimeout(function() { renderQRWithLogo(containerId, text, coinSym); }, 300); return; }
     
+    // Create a wrapper and canvas
     container.innerHTML = '<div class="qr-wrap"><canvas id="' + containerId + '_canvas"></canvas></div>';
     const canvas = document.getElementById(containerId + '_canvas');
     
+    // Use higher resolution for the canvas so it looks crisp
     QRCode.toCanvas(canvas, text, { width: 400, margin: 0, color:{ dark:'#0b0e14', light:'#ffffff' }, errorCorrectionLevel:'H' }, function(err) {
       if (err) return;
       
@@ -3669,23 +3689,29 @@
       const size = 400;
       const dotSize = size / 45; // Approximate grid size for standard QR
       
+      // Clear canvas
       ctx.clearRect(0, 0, size, size);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
       
+      // Redraw QR with custom rounded dots
+      // We read the existing drawn QR data to know where to put dots
       const imageData = ctx.getImageData(0, 0, size, size);
       ctx.clearRect(0, 0, size, size);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
       
+      // Draw dots
       ctx.fillStyle = '#0b0e14';
       for (let y = 0; y < size; y += dotSize) {
         for (let x = 0; x < size; x += dotSize) {
+          // Check the center of the block
           const px = Math.floor(x + dotSize/2);
           const py = Math.floor(y + dotSize/2);
           const index = (py * size + px) * 4;
           
           if (px < size && py < size && imageData.data[index] < 128) {
+            // This is a dark module, draw a rounded rect
             ctx.beginPath();
             ctx.arc(x + dotSize/2, y + dotSize/2, dotSize/2.2, 0, Math.PI * 2);
             ctx.fill();
@@ -3693,16 +3719,18 @@
         }
       }
       
+      // Add the logo in the center
       const logoWrap = document.createElement('div');
       logoWrap.className = 'qr-logo ' + COINS[coinSym].colorClass;
       
+      // Determine what text to put inside the logo
       const isSmall = window.innerWidth < 400;
       let logoTxt = COINS[coinSym].networkShort;
       if (coinSym === 'USDT_TRC20') logoTxt = 'TRX';
       if (coinSym === 'USDT_BEP20') logoTxt = 'BNB';
       if (coinSym === 'USDT_TON') logoTxt = 'TON';
       
-      logoWrap.innerHTML = COINS[coinSym].icon;
+      logoWrap.innerHTML = COINS[coinSym].icon; // Or use text if preferred
       container.querySelector('.qr-wrap').appendChild(logoWrap);
     });
   }
