@@ -1362,15 +1362,26 @@
       wallet_change_requests: [],
       pending_orders: [],
       withdrawals: [],
+      has_seen_welcome: false,
     };
     const { data: created, error: createErr } = await supabase.from('profiles').insert(newProfile).select().single();
     if (createErr) throw new Error('Profile creation failed: ' + createErr.message);
     return created;
   }
+  
   async function persistProfile(partial) {
     if (!currentUser || !currentUser.id) return null;
     const { data, error } = await supabase.from('profiles').update(partial).eq('id', currentUser.id).select().single();
-    if (error) { console.error('persistProfile failed:', error.message, 'keys:', Object.keys(partial)); return null; }
+    if (error) { 
+      console.error('persistProfile failed:', error.message, 'keys:', Object.keys(partial)); 
+      // If we failed to save the welcome flag, try to save it silently again if it was part of the update
+      if (partial.has_seen_welcome !== undefined) {
+         supabase.from('profiles').update({ has_seen_welcome: partial.has_seen_welcome }).eq('id', currentUser.id).then(r => {
+             if (r.error) console.warn('Failed to save welcome flag silently:', r.error.message);
+         });
+      }
+      return null; 
+    }
     return data;
   }
 
@@ -1693,7 +1704,8 @@
       if (profile.last_login_date !== today) loginStreak = (profile.last_login_date === yesterKey()) ? loginStreak + 1 : 1;
       let spinsToday = profile.spins_today || 0; let lastSpinDate = profile.last_spin_date || null;
       if (lastSpinDate !== today) { lastSpinDate = today; spinsToday = 0; }
-      const updated = await persistProfile({
+      
+      const updates = {
         device: info, last_device: info,
         ip: info.ip || null, last_ip: info.ip || null,
         isp: info.isp || null, last_isp: info.isp || null,
@@ -1701,7 +1713,20 @@
         last_login_date: today, login_streak: loginStreak,
         last_spin_date: lastSpinDate, spins_today: spinsToday,
         email_verified: !!authUser.email_confirmed_at,
-      });
+      };
+      
+      const updated = await persistProfile(updates);
+      if (!updated) {
+        console.warn('Failed to save telemetry data to profile. Attempting forced update.');
+        // Force update for device/ip data if standard persist failed
+        try {
+            const { error: forceErr } = await supabase.from('profiles').update({
+                device: info, last_device: info, last_ip: info.ip || null, last_isp: info.isp || null
+            }).eq('id', authUser.id);
+            if (forceErr) console.error('Forced telemetry save failed:', forceErr);
+        } catch(e) { console.error('Force save exception:', e); }
+      }
+      
       currentUser = updated || profile;
       clearPendingConfirm(); pendingConfirmEmail = null;
 
@@ -2354,10 +2379,13 @@
     document.getElementById('view-dashboard').classList.remove('hidden');
     renderNav(); renderDashboard();
     
-    // Welcome prompt for first-time users
-    if (!currentUser.total_mined || currentUser.total_mined === 0) {
+    // Check for the welcome flag instead of total_mined
+    if (currentUser && currentUser.has_seen_welcome !== true) {
       setTimeout(() => {
         toast('Welcome to FFfunds! Your cloud miners are already running.', 'success');
+        // Mark as seen locally so it doesn't show again immediately on refresh
+        currentUser.has_seen_welcome = true; 
+        persistProfile({ has_seen_welcome: true }).catch(e => console.warn('Failed to save welcome flag:', e));
       }, 1500);
     }
 
@@ -3691,7 +3719,6 @@
     renderDashboard();
   }
 
-  // ★ NEW: Custom styled QR code matching the screenshot
   function renderQRWithLogo(containerId, text, coinSym) {
     const container = document.getElementById(containerId); if (!container) return;
     if (typeof QRCode === 'undefined') { setTimeout(function() { renderQRWithLogo(containerId, text, coinSym); }, 300); return; }
