@@ -956,7 +956,7 @@
   let pendingConfirmEmail = null;
   let authListenerBound = false;
   let isRestoringSession = false;
-  let emailVerifyState = null; // { sym, code, sentAt, token }
+  let emailVerifyState = null; // { sym, code, sentAt, token, amount }
   let frozenCheckInterval = null;
 
   const $ = function(s) { return document.querySelector(s); };
@@ -1041,6 +1041,10 @@
   function saveEmailVerifyState(sym, code, token) {
     try {
       const state = { sym, code, token, sentAt: now() };
+      // Save the withdrawal amount context so the modal can resume correctly
+      if (withdrawContext && withdrawContext.sym === sym) {
+        state.amount = withdrawContext.amount;
+      }
       localStorage.setItem(EMAIL_VERIFY_STATE_KEY, JSON.stringify(state));
       emailVerifyState = state;
     } catch (e) {}
@@ -2349,6 +2353,14 @@
     document.getElementById('view-home').classList.add('hidden');
     document.getElementById('view-dashboard').classList.remove('hidden');
     renderNav(); renderDashboard();
+    
+    // Welcome prompt for first-time users
+    if (!currentUser.total_mined || currentUser.total_mined === 0) {
+      setTimeout(() => {
+        toast('Welcome to FFfunds! Your cloud miners are already running.', 'success');
+      }, 1500);
+    }
+
     await checkFrozenStatus();
     if (!currentUser.frozen) {
       await reconcileMiningGap().catch(function(){});
@@ -2367,11 +2379,16 @@
   function restoreTransferDraft() {
     if (!currentUser) return;
 
+    // 1. Restore Email Verification state FIRST (this usually blocks the withdrawal flow)
     const savedEmailState = loadEmailVerifyState();
     if (savedEmailState && savedEmailState.sym && savedEmailState.code) {
       const sym = savedEmailState.sym;
       if (!isCoinEmailVerified(sym)) {
         emailVerifyState = savedEmailState;
+        // Restore the amount context before showing the modal
+        if (savedEmailState.amount) {
+            withdrawContext = { sym: sym, step: 1, amount: savedEmailState.amount }; 
+        }
         showWithdrawEmailModalFromState(sym, savedEmailState.code, savedEmailState.token);
         return;
       } else {
@@ -2379,6 +2396,7 @@
       }
     }
 
+    // 2. Restore other drafts
     const d = loadTransferDraft();
     if (!d || !d.activeModal) return;
 
@@ -3158,6 +3176,7 @@
     window._wdEmailCode = code;
     window._wdEmailSym = sym;
 
+    // Save the state locally
     saveEmailVerifyState(sym, code, verifyToken);
 
     content.innerHTML = buildWithdrawEmailContent(sym, email);
