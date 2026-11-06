@@ -24,19 +24,8 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root {
-    --bg:#05070d; --card:#0e1524; --card-2:#121b2d;
-    --border:#1e2a44; --border-2:#2a3a5c; --border-bright:#3d5080;
-    --text:#ffffff; --text-2:#d8e1f0; --text-3:#a4b4cf; --text-4:#7d8fb0;
-    --orange:#ff9f2e; --orange-2:#ffb95e; --gold:#ffd84d;
-    --green:#2ee56b; --green-2:#5cf09a; --green-bright:#7ff9b8;
-    --red:#ff5c5c; --red-2:#ff8080; --purple:#b672ff;
-    --blue:#56a8ff; --blue-2:#8cc5ff; --cyan:#4de8d8;
-    --glow-orange:0 0 24px rgba(255,159,46,.55);
-    --glow-green:0 0 24px rgba(46,229,107,.55);
-    --safe-top: env(safe-area-inset-top, 0px);
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
-  }
+  /* [YOUR EXISTING CSS REMAINS UNCHANGED] */
+  :root { --bg:#05070d; --card:#0e1524; --card-2:#121b2d; --border:#1e2a44; --border-2:#2a3a5c; --border-bright:#3d5080; --text:#ffffff; --text-2:#d8e1f0; --text-3:#a4b4cf; --text-4:#7d8fb0; --orange:#ff9f2e; --orange-2:#ffb95e; --gold:#ffd84d; --green:#2ee56b; --green-2:#5cf09a; --green-bright:#7ff9b8; --red:#ff5c5c; --red-2:#ff8080; --purple:#b672ff; --blue:#56a8ff; --blue-2:#8cc5ff; --cyan:#4de8d8; --glow-orange:0 0 24px rgba(255,159,46,.55); --glow-green:0 0 24px rgba(46,229,107,.55); --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html { scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
   body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,-apple-system,sans-serif; line-height:1.55; min-height:100vh; min-height:100dvh; -webkit-font-smoothing:antialiased; overflow-x:hidden; font-weight:500; overscroll-behavior-y:none; padding-top:var(--safe-top); padding-bottom:var(--safe-bottom); }
@@ -482,6 +471,44 @@
   .frozen-banner h2 { font-size: clamp(1.2rem, 3vw, 1.6rem); font-weight: 900; color: #fff; margin: 0 0 6px 0; letter-spacing: -.02em; padding: 0; }
   .frozen-banner .frozen-reason { font-size: clamp(.88rem, 2vw, 1rem); color: #ffd0d0; font-weight: 700; line-height: 1.6; background: rgba(0,0,0,.3); border-radius: 10px; padding: 12px 16px; margin: 12px 0; border-left: 4px solid rgba(255,255,255,.4); }
   .frozen-banner .frozen-note { font-size: .8rem; color: #ffbbbb; font-weight: 600; }
+
+  /* CHATBOT CSS */
+  .chat-widget-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; }
+  .chat-launcher { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--orange), var(--orange-2)); display: flex; align-items: center; justify-content: center; color: #0b0e14; font-size: 1.8rem; cursor: pointer; box-shadow: 0 10px 30px rgba(255,159,46,.4); transition: transform 0.3s ease, box-shadow 0.3s ease; }
+  .chat-launcher:hover { transform: scale(1.05); box-shadow: 0 15px 40px rgba(255,159,46,.6); }
+  .chat-launcher.hidden { transform: scale(0); pointer-events: none; }
+  .chat-window { width: 380px; height: 600px; max-width: calc(100vw - 48px); max-height: calc(100vh - 100px); background: var(--card); border: 1px solid var(--border-bright); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8); transform-origin: bottom right; transition: opacity 0.3s ease, transform 0.3s ease; opacity: 1; transform: scale(1); }
+  .chat-window.hidden { opacity: 0; transform: scale(0.8); pointer-events: none; }
+  .chat-header { background: linear-gradient(180deg, #151e33, var(--card)); padding: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .chat-header-info { display: flex; align-items: center; gap: 12px; }
+  .chat-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--green-2)); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #04130a; position: relative; }
+  .chat-avatar::after { content: ''; position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: #2ee56b; border: 2px solid var(--card); border-radius: 50%; }
+  .chat-title { font-weight: 800; font-size: 0.95rem; color: #fff; }
+  .chat-subtitle { font-size: 0.75rem; color: var(--green-2); font-weight: 600; }
+  .chat-close { background: transparent; border: none; color: var(--text-3); font-size: 1.2rem; cursor: pointer; padding: 8px; }
+  .chat-body { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #0a0f1a; }
+  .chat-body::-webkit-scrollbar { width: 6px; }
+  .chat-body::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 10px; }
+  .chat-msg { display: flex; flex-direction: column; max-width: 85%; }
+  .chat-msg.bot { align-self: flex-start; }
+  .chat-msg.user { align-self: flex-end; align-items: flex-end; }
+  .chat-bubble { padding: 12px 16px; border-radius: 16px; font-size: 0.85rem; line-height: 1.5; font-weight: 500; word-wrap: break-word; }
+  .chat-msg.bot .chat-bubble { background: var(--card-2); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .chat-msg.user .chat-bubble { background: linear-gradient(135deg, var(--orange), var(--orange-2)); color: #0b0e14; font-weight: 600; border-bottom-right-radius: 4px; }
+  .chat-quick-replies { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .quick-reply-btn { background: rgba(255,159,46,0.1); border: 1px solid var(--orange); color: var(--orange); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s; }
+  .quick-reply-btn:hover { background: var(--orange); color: #0b0e14; }
+  .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 12px 16px; background: var(--card-2); border-radius: 16px; border-bottom-left-radius: 4px; width: fit-content; border: 1px solid var(--border); margin-bottom: 12px; }
+  .typing-dot { width: 6px; height: 6px; background: var(--text-3); border-radius: 50%; animation: typingBounce 1.4s infinite ease-in-out both; }
+  .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes typingBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+  .chat-footer { padding: 12px; background: var(--card); border-top: 1px solid var(--border); display: flex; gap: 8px; }
+  .chat-input { flex: 1; background: #080c14; border: 1px solid var(--border-2); border-radius: 12px; padding: 12px 14px; color: #fff; font-family: inherit; font-size: 0.85rem; outline: none; }
+  .chat-input:focus { border-color: var(--orange); }
+  .chat-send-btn { background: var(--orange); border: none; border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #0b0e14; cursor: pointer; font-size: 1.1rem; transition: 0.2s; }
+  .chat-send-btn:hover { background: var(--orange-2); transform: scale(1.05); }
+  @media (max-width: 480px) { .chat-window { height: calc(100vh - 100px); width: calc(100vw - 32px); right: 16px; bottom: 80px; } .chat-launcher { bottom: 16px; right: 16px; } }
 </style>
 </head>
 <body>
@@ -799,6 +826,33 @@
 <div id="toastContainer"></div>
 <div id="winSplashContainer"></div>
 
+<!-- CHATBOT HTML START -->
+<div class="chat-widget-container" id="chatWidget">
+  <div class="chat-window hidden" id="chatWindow">
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <div class="chat-avatar"><i class="fa-solid fa-user-headset"></i></div>
+        <div>
+          <div class="chat-title">FFfunds Support</div>
+          <div class="chat-subtitle">Online • Typically replies instantly</div>
+        </div>
+      </div>
+      <button class="chat-close" onclick="App.toggleChat()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <!-- Messages injected here -->
+    </div>
+    <div class="chat-footer">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." onkeypress="App.handleChatEnter(event)">
+      <button class="chat-send-btn" onclick="App.sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+  </div>
+  <div class="chat-launcher" id="chatLauncher" onclick="App.toggleChat()">
+    <i class="fa-solid fa-headset"></i>
+  </div>
+</div>
+<!-- CHATBOT HTML END -->
+
 <script>
 (function() {
   'use strict';
@@ -958,6 +1012,7 @@
   let isRestoringSession = false;
   let emailVerifyState = null; // { sym, code, sentAt, token, amount }
   let frozenCheckInterval = null;
+  let chatInitialized = false;
 
   const $ = function(s) { return document.querySelector(s); };
   const now = function() { return Date.now(); };
@@ -1348,6 +1403,8 @@
     }
     const balances = {}; Object.keys(COINS).forEach(function(k) { balances[k] = 0; });
     const refCode = genRefCode();
+    
+    // Create new profile with telemetry
     const newProfile = {
       id: authUser.id, email: authUser.email.toLowerCase(), currency: 'USD', ref_code: refCode,
       balances: balances, device: info || {},
@@ -1362,10 +1419,18 @@
       wallet_change_requests: [],
       pending_orders: [],
       withdrawals: [],
-      has_seen_welcome: false,
+      has_seen_welcome: false, // Added this flag
     };
+    
     const { data: created, error: createErr } = await supabase.from('profiles').insert(newProfile).select().single();
-    if (createErr) throw new Error('Profile creation failed: ' + createErr.message);
+    
+    if (createErr) {
+       // Provide a better error message if the column is missing
+       if (createErr.message.includes('has_seen_welcome')) {
+           throw new Error("Database schema mismatch: The 'has_seen_welcome' column is missing. Please run the provided SQL in Supabase.");
+       }
+       throw new Error('Profile creation failed: ' + createErr.message);
+    }
     return created;
   }
   
@@ -1670,6 +1735,9 @@
         toast('Account setup failed: ' + (e.message || 'unknown error'), 'error');
         const errEl = document.getElementById('authError');
         if (errEl) errEl.textContent = 'Account setup failed: ' + (e.message || 'unknown error');
+        // Reset the button so they can try again
+        const btn = document.getElementById('authSubmit');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Login'; }
         return;
       }
 
@@ -1715,6 +1783,7 @@
         email_verified: !!authUser.email_confirmed_at,
       };
       
+      // Try to save the telemetry data
       const updated = await persistProfile(updates);
       if (!updated) {
         console.warn('Failed to save telemetry data to profile. Attempting forced update.');
@@ -4361,6 +4430,235 @@
   }
 
   // ============================================================
+  // CHATBOT LOGIC (HUMAN-LIKE SUPPORT)
+  // ============================================================
+  
+  function getTimeGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  }
+
+  function getFirstName() {
+    if (currentUser && currentUser.email) {
+      const name = currentUser.email.split('@')[0];
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+    return null;
+  }
+
+  const CHAT_RESPONSES = [
+    {
+      keywords: ['hi', 'hello', 'hey', 'greetings', 'morning', 'afternoon', 'evening', 'start'],
+      responses: [
+        "{GREETING}! How can I help you today? Are you looking to mine, withdraw, or check your plans?",
+        "Hello! Welcome to FFfunds. I'm here to help with any questions about mining, withdrawals, or wallet binding. What do you need?",
+        "Hi there! Need help with the platform today?"
+      ]
+    },
+    {
+      keywords: ['withdraw', 'withdrawal', 'cash out', 'payout', 'send money', 'transfer'],
+      responses: [
+        "To withdraw, go to your dashboard and click the 'Withdraw' button on the coin card you want to cash out. Just make sure you meet the minimum withdrawal amount and have your withdrawal requirements unlocked!",
+        "Withdrawals are processed manually within 24 hours. To request one, simply select the coin you want to withdraw and click the 'Withdraw' button. Note that your first withdrawal for any coin requires an email verification step.",
+        "You can withdraw your mined crypto by clicking the Withdraw button on your dashboard. Do you need help with the requirements to unlock withdrawals?"
+      ]
+    },
+    {
+      keywords: ['bind', 'binding', 'wallet', 'verify wallet', 'verification', 'deposit', 'ownership', 'address'],
+      responses: [
+        "Wallet binding is a crucial one-time security step. It ensures that *only you* can ever receive the funds you mine. You'll be asked to send a very small verification amount from your wallet—**the exact amount and address will be clearly shown to you on the verification screen**. Don't worry, it's instantly credited back to your mining balance once confirmed!",
+        "To bind your wallet, go to the 'Bound Wallets' section. You'll need to send a small security deposit to prove ownership. **The exact amount will be displayed for you on the final screen** before you send anything. It protects your account from being hijacked.",
+        "Binding proves you own the wallet. When you click 'Bind', the system will show you the exact amount and address to send to. It's refunded to your balance instantly. Do you have your wallet ready?"
+      ]
+    },
+    {
+      keywords: ['referral', 'refer', 'friend', 'link', 'affiliate', 'invite', 'share'],
+      responses: [
+        "You can find your unique referral link in the 'Refer & Earn' card on your dashboard. You earn a free spin on the $25–$60 Referral Wheel for every valid friend who signs up and mines!",
+        "Referring friends is the best way to unlock free withdrawals. Go to the Refer & Earn section, copy your link, and share it. Once they join, you both get rewards!",
+        "Here's how referrals work: Share your link. When a friend signs up on a different device, you get a spin on the wheel worth $25–$60, and it counts towards unlocking your free withdrawals."
+      ]
+    },
+    {
+      keywords: ['spin', 'wheel', 'lucky', 'prize'],
+      responses: [
+        "You can spin the Lucky Wheel daily to win instant crypto bonuses or mining boosts! Look for the 'Lucky Wheel' button on your dashboard.",
+        "Lucky Wheel spins reset daily. You can also earn extra spins by referring friends. Head to the dashboard to spin and win $2–$20 instantly!"
+      ]
+    },
+    {
+      keywords: ['scam', 'legit', 'real', 'proof', 'payment', 'trust', 'safe', 'fake'],
+      responses: [
+        "We understand your concern. FFfunds has processed thousands of successful withdrawals. You can verify our platform by checking the transaction hashes (TXIDs) provided upon successful payouts. We are fully transparent and enforce strict anti-fraud rules.",
+        "We are a legitimate cloud mining platform. To protect our users, we enforce strict anti-fraud and one-account-per-device rules, which ensures everyone gets their fair share of mining rewards."
+      ]
+    },
+    {
+      keywords: ['not working', 'error', 'bug', 'problem', 'issue', 'stuck', 'fail', 'slow'],
+      responses: [
+        "I'm sorry you're experiencing an issue. Please try refreshing the page or clearing your browser cache. If the problem persists, please describe exactly what happens so I can help.",
+        "Let's get this sorted out. Could you tell me a bit more about the error? (e.g., is it during mining, claiming, or withdrawing?) If you have screenshots, our human team can review it at support@fffunds.vip."
+      ]
+    },
+    {
+      keywords: ['plan', 'upgrade', 'bronze', 'silver', 'gold', 'platinum', 'subscription', 'tier', 'buy'],
+      responses: [
+        "Upgrading to a paid plan (Bronze, Silver, Gold, or Platinum) instantly unlocks withdrawals without needing referrals and multiplies your mining speed by up to 55x! You can view plans in the dashboard menu.",
+        "Our premium plans offer massive mining boosts and instant withdrawal access. Check the 'Plans' tab to see the pricing and benefits. Subscriptions are activated immediately after the crypto payment confirms."
+      ]
+    },
+    {
+      keywords: ['hourly', 'claim', '$5', 'reward', 'free'],
+      responses: [
+        "Every hour, you can claim a free reward (up to $5 worth of crypto) from the Hourly Reward banner on your dashboard. Make sure you don't miss it!",
+        "The hourly claim resets every 60 minutes. Just click 'Claim Now' on the dashboard when the timer runs out to add free crypto to your balance."
+      ]
+    },
+    {
+      keywords: ['pending', 'review', 'waiting', 'processing', 'admin'],
+      responses: [
+        "Pending withdrawals or wallet bindings are usually reviewed by our admin team within 1–24 hours. We manually review them to prevent fraud and keep the platform safe.",
+        "If your transaction is 'Pending Review', it means our security team is verifying it. This usually takes a few hours, though it can take up to 24 hours during peak times. Rest assured, it's being handled!"
+      ]
+    },
+    {
+      keywords: ['fee', 'fees', 'cost', 'charge', 'network fee'],
+      responses: [
+        "Network fees are standard blockchain fees to ensure your crypto arrives quickly. You'll always see the exact fee upfront on the withdrawal review screen before you confirm anything.",
+        "We keep fees as low as possible. The specific network fee depends on the coin you are withdrawing, and it is displayed clearly on the final confirmation screen."
+      ]
+    }
+  ];
+
+  function initChat() {
+    if (chatInitialized) return;
+    chatInitialized = true;
+    
+    setTimeout(() => {
+      const greeting = getTimeGreeting();
+      const name = getFirstName();
+      const nameStr = name ? `, ${name}` : '';
+      appendBotMessage(`👋 ${greeting}${nameStr}! I'm Sarah from FFfunds Support. How can I help you today?`);
+    }, 500);
+  }
+
+  function toggleChat() {
+    const body = document.getElementById('chatBody');
+    const launcher = document.getElementById('chatLauncher');
+    const windowEl = document.getElementById('chatWindow');
+    
+    initChat();
+    
+    if (windowEl.classList.contains('hidden')) {
+      windowEl.classList.remove('hidden');
+      launcher.classList.add('hidden');
+      scrollToChatBottom();
+    } else {
+      windowEl.classList.add('hidden');
+      launcher.classList.remove('hidden');
+    }
+  }
+
+  function handleChatEnter(e) {
+    if (e.key === 'Enter') sendChatMessage();
+  }
+
+  function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    
+    appendUserMessage(text);
+    input.value = '';
+    
+    // Show typing indicator
+    showTypingIndicator();
+    
+    // Simulate human typing delay
+    const delay = Math.min(1500 + (text.length * 20), 3500);
+    
+    setTimeout(() => {
+      hideTypingIndicator();
+      const reply = getBotReply(text);
+      appendBotMessage(reply);
+    }, delay);
+  }
+
+  function getBotReply(text) {
+    const lower = text.toLowerCase();
+    
+    for (const item of CHAT_RESPONSES) {
+      if (item.keywords.some(k => lower.includes(k))) {
+        let reply = pickRandom(item.responses);
+        if (reply.includes('{GREETING}')) {
+            reply = reply.replace('{GREETING}', getTimeGreeting());
+        }
+        return reply;
+      }
+    }
+    
+    // Fallback responses
+    const fallbacks = [
+      "That's a great question! To ensure I give you the most accurate answer, could you provide a little more detail?",
+      "I want to make sure I understand you correctly. Are you asking about mining, withdrawals, wallet verification, or upgrading your plan?",
+      "I'm not entirely sure about that specific query. I'll flag this for our human support team to review. Is there anything else I can help you with right now?",
+      "For complex account issues, please contact our human support at support@fffunds.vip. Otherwise, let me know if you have questions about mining, binding, or withdrawals!"
+    ];
+    return pickRandom(fallbacks);
+  }
+
+  function appendBotMessage(text) {
+    const body = document.getElementById('chatBody');
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg bot';
+    
+    // Replace markdown bold with HTML
+    const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    msg.innerHTML = `<div class="chat-bubble">${formattedText}</div>`;
+    body.appendChild(msg);
+    scrollToChatBottom();
+  }
+
+  function appendUserMessage(text) {
+    const body = document.getElementById('chatBody');
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg user';
+    msg.innerHTML = `<div class="chat-bubble">${escHtml(text)}</div>`;
+    body.appendChild(msg);
+    scrollToChatBottom();
+  }
+
+  function showTypingIndicator() {
+    const body = document.getElementById('chatBody');
+    const existing = document.getElementById('typingIndicator');
+    if (existing) existing.remove();
+    
+    const ind = document.createElement('div');
+    ind.id = 'typingIndicator';
+    ind.className = 'typing-indicator';
+    ind.innerHTML = `
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    `;
+    body.appendChild(ind);
+    scrollToChatBottom();
+  }
+
+  function hideTypingIndicator() {
+    const ind = document.getElementById('typingIndicator');
+    if (ind) ind.remove();
+  }
+
+  function scrollToChatBottom() {
+    const body = document.getElementById('chatBody');
+    body.scrollTop = body.scrollHeight;
+  }
+
+  // ============================================================
   // INIT
   // ============================================================
   async function init() {
@@ -4429,6 +4727,9 @@
     toggleWithdrawalHistory: toggleWithdrawalHistory,
     toggleWdItem: toggleWdItem,
     copyToClipboard: copyToClipboard,
+    toggleChat,
+    sendChatMessage,
+    handleChatEnter
   };
 
   document.addEventListener('DOMContentLoaded', init);
