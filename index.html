@@ -471,57 +471,231 @@
   .frozen-banner .frozen-reason { font-size: clamp(.88rem, 2vw, 1rem); color: #ffd0d0; font-weight: 700; line-height: 1.6; background: rgba(0,0,0,.3); border-radius: 10px; padding: 12px 16px; margin: 12px 0; border-left: 4px solid rgba(255,255,255,.4); }
   .frozen-banner .frozen-note { font-size: .8rem; color: #ffbbbb; font-weight: 600; }
 
+  /* ===== BROADCAST CARD ===== */
+  .broadcast-card {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, rgba(86,168,255,.12), rgba(182,114,255,.08), rgba(255,159,46,.06));
+    border: 1px solid rgba(86,168,255,.35);
+    box-shadow: 0 8px 30px -12px rgba(86,168,255,.4);
+    animation: broadcastIn .5s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes broadcastIn {
+    from { opacity: 0; transform: translateY(-8px) scale(.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .broadcast-glow {
+    position: absolute; top: -60%; left: -10%; width: 60%; height: 220%;
+    background: radial-gradient(circle, rgba(86,168,255,.35), transparent 60%);
+    filter: blur(40px); pointer-events: none;
+    animation: broadcastGlow 6s ease-in-out infinite;
+  }
+  @keyframes broadcastGlow {
+    0%,100% { opacity: .5; transform: translateX(0); }
+    50% { opacity: .9; transform: translateX(20%); }
+  }
+  .broadcast-inner {
+    position: relative; z-index: 1;
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px 12px;
+  }
+  .broadcast-icon {
+    width: 38px; height: 38px; flex-shrink: 0;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #56a8ff, #8cc5ff);
+    display: flex; align-items: center; justify-content: center;
+    color: #04130a; font-size: 1rem;
+    box-shadow: 0 6px 18px -6px rgba(86,168,255,.9);
+    animation: broadcastIconPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes broadcastIconPulse {
+    0%,100% { transform: scale(1); box-shadow: 0 6px 18px -6px rgba(86,168,255,.9); }
+    50% { transform: scale(1.06); box-shadow: 0 8px 26px -4px rgba(86,168,255,1); }
+  }
+  .broadcast-body { flex: 1; min-width: 0; padding-right: 26px; }
+  .broadcast-meta {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-bottom: 5px;
+  }
+  .broadcast-label {
+    font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--blue-2);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .broadcast-label i { font-size: .55rem; animation: broadcastSignal 1.6s ease-in-out infinite; }
+  @keyframes broadcastSignal {
+    0%,100% { opacity: 1; }
+    50% { opacity: .35; }
+  }
+  .broadcast-counter {
+    font-size: .64rem; font-weight: 800; color: var(--text-3);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 8px; border-radius: 20px;
+    background: rgba(0,0,0,.3);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .broadcast-text {
+    font-size: .84rem; line-height: 1.6; font-weight: 600;
+    color: #e3ecff;
+    word-break: break-word;
+  }
+  .broadcast-text.revealing {
+    animation: broadcastReveal .45s ease;
+  }
+  @keyframes broadcastReveal {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .broadcast-actions {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+  }
+  .broadcast-actions:empty { display: none; }
+  .broadcast-link {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(86,168,255,.3);
+    color: var(--blue-2);
+    padding: 4px 10px; border-radius: 20px;
+    font-size: .7rem; font-weight: 800;
+    cursor: pointer; font-family: inherit;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: .2s;
+  }
+  .broadcast-link:hover {
+    background: rgba(86,168,255,.18);
+    color: #fff;
+    border-color: var(--blue-2);
+  }
+  .broadcast-close {
+    position: absolute; top: 10px; right: 10px;
+    width: 26px; height: 26px; border-radius: 8px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    color: var(--text-3); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem; z-index: 2;
+    transition: .2s;
+  }
+  .broadcast-close:hover { background: rgba(255,92,92,.2); color: #fff; border-color: var(--red-2); }
+  .broadcast-progress {
+    height: 3px; background: rgba(0,0,0,.35);
+    position: relative; z-index: 1;
+  }
+  .broadcast-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #56a8ff, #b672ff);
+    border-radius: 0 3px 3px 0;
+    width: 0%;
+  }
+  @media (max-width: 520px) {
+    .broadcast-inner { padding: 12px 12px 10px; gap: 10px; }
+    .broadcast-icon { width: 32px; height: 32px; font-size: .85rem; border-radius: 9px; }
+    .broadcast-text { font-size: .8rem; }
+    .broadcast-body { padding-right: 20px; }
+  }
+
   /* CHATBOT CSS */
   .chat-widget-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; }
   
-  /* UPDATED: Red Question Mark Launcher */
   .chat-launcher { 
-    width: 56px; height: 56px; border-radius: 50%; 
-    background: linear-gradient(135deg, var(--red), #d93636); 
+    width: 56px; height: 56px; 
     display: flex; align-items: center; justify-content: center; 
-    color: #fff; font-size: 1.6rem; font-weight: 900; cursor: pointer; 
-    box-shadow: 0 4px 15px rgba(255,92,92,.4); 
-    transition: transform 0.3s ease, box-shadow 0.3s ease; 
-    animation: questionPulse 2.5s infinite; /* Gentle pulsing animation */
+    font-size: 3rem; font-weight: 900; 
+    color: var(--gold); 
+    cursor: pointer;
+    text-shadow: 0 4px 15px rgba(255,159,46,.8), 0 2px 4px rgba(0,0,0,.8);
+    transition: transform 0.3s ease, color 0.3s ease; 
+    animation: questionPulse 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px rgba(255,216,77,0.5));
   }
-  .chat-launcher:hover { transform: scale(1.1); box-shadow: 0 8px 25px rgba(255,92,92,.6); animation: none; }
-  .chat-launcher.hidden { transform: scale(0); pointer-events: none; }
+  
+  .chat-launcher:hover { 
+    transform: scale(1.15); 
+    color: var(--orange);
+    animation: none; 
+    filter: drop-shadow(0 0 15px rgba(255,159,46,0.8));
+  }
+  
+  .chat-launcher.hidden { transform: scale(0); pointer-events: none; opacity: 0; }
 
   @keyframes questionPulse {
-    0% { box-shadow: 0 0 0 0 rgba(255,92,92, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(255,92,92, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255,92,92, 0); }
+    0% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(255,216,77,0.4)); }
+    50% { transform: scale(1.1); filter: drop-shadow(0 0 20px rgba(255,216,77,0.9)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(255,216,77,0.4)); }
   }
 
   .chat-window { width: 380px; height: 600px; max-width: calc(100vw - 48px); max-height: calc(100vh - 100px); background: var(--card); border: 1px solid var(--border-bright); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8); transform-origin: bottom right; transition: opacity 0.3s ease, transform 0.3s ease; opacity: 1; transform: scale(1); }
   .chat-window.hidden { opacity: 0; transform: scale(0.8); pointer-events: none; }
+  
   .chat-header { background: linear-gradient(180deg, #151e33, var(--card)); padding: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
   .chat-header-info { display: flex; align-items: center; gap: 12px; }
-  .chat-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--green-2)); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #04130a; position: relative; }
-  .chat-avatar::after { content: ''; position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: #2ee56b; border: 2px solid var(--card); border-radius: 50%; }
+  
+  .chat-avatar { width: 44px; height: 44px; border-radius: 50%; background: #1a2334; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #04130a; position: relative; border: 2px solid var(--border-2); overflow: hidden; transition: border-color .3s, box-shadow .3s; }
+  .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .chat-avatar::after { content: ''; position: absolute; bottom: 2px; right: 2px; width: 10px; height: 10px; background: #2ee56b; border: 2px solid var(--card); border-radius: 50%; }
+  
   .chat-title { font-weight: 800; font-size: 0.95rem; color: #fff; }
   .chat-subtitle { font-size: 0.75rem; color: var(--green-2); font-weight: 600; }
   .chat-close { background: transparent; border: none; color: var(--text-3); font-size: 1.2rem; cursor: pointer; padding: 8px; }
+  
   .chat-body { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #0a0f1a; }
   .chat-body::-webkit-scrollbar { width: 6px; }
   .chat-body::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 10px; }
+  
   .chat-msg { display: flex; flex-direction: column; max-width: 85%; }
   .chat-msg.bot { align-self: flex-start; }
   .chat-msg.user { align-self: flex-end; align-items: flex-end; }
+  
   .chat-bubble { padding: 12px 16px; border-radius: 16px; font-size: 0.85rem; line-height: 1.5; font-weight: 500; word-wrap: break-word; }
   .chat-msg.bot .chat-bubble { background: var(--card-2); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
   .chat-msg.user .chat-bubble { background: linear-gradient(135deg, var(--orange), var(--orange-2)); color: #0b0e14; font-weight: 600; border-bottom-right-radius: 4px; }
+
   .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 12px 16px; background: var(--card-2); border-radius: 16px; border-bottom-left-radius: 4px; width: fit-content; border: 1px solid var(--border); margin-bottom: 12px; }
   .typing-dot { width: 6px; height: 6px; background: var(--text-3); border-radius: 50%; animation: typingBounce 1.4s infinite ease-in-out both; }
   .typing-dot:nth-child(1) { animation-delay: -0.32s; }
   .typing-dot:nth-child(2) { animation-delay: -0.16s; }
   @keyframes typingBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+  
   .chat-footer { padding: 12px; background: var(--card); border-top: 1px solid var(--border); display: flex; gap: 8px; }
   .chat-input { flex: 1; background: #080c14; border: 1px solid var(--border-2); border-radius: 12px; padding: 12px 14px; color: #fff; font-family: inherit; font-size: 0.85rem; outline: none; }
   .chat-input:focus { border-color: var(--orange); }
   .chat-send-btn { background: var(--orange); border: none; border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #0b0e14; cursor: pointer; font-size: 1.1rem; transition: 0.2s; }
   .chat-send-btn:hover { background: var(--orange-2); transform: scale(1.05); }
-  @media (max-width: 480px) { .chat-window { height: calc(100vh - 100px); width: calc(100vw - 32px); right: 16px; bottom: 80px; } .chat-launcher { bottom: 16px; right: 16px; } }
+
+  /* ===== CHAT KEYWORD CHIPS ===== */
+  .chat-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 8px; margin-bottom: 4px;
+    padding: 0 4px;
+  }
+  .chat-chip {
+    background: rgba(86,168,255,.12);
+    border: 1px solid rgba(86,168,255,.4);
+    color: var(--blue-2);
+    padding: 6px 11px; border-radius: 20px;
+    font-size: .72rem; font-weight: 800;
+    cursor: pointer; font-family: inherit;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: .18s;
+    animation: chipPop .35s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  .chat-chip:hover {
+    background: rgba(86,168,255,.28);
+    color: #fff;
+    transform: translateY(-1px) scale(1.03);
+    border-color: var(--blue-2);
+  }
+  .chat-chip i { font-size: .65rem; opacity: .85; }
+  @keyframes chipPop {
+    from { opacity: 0; transform: scale(.7); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  @media (max-width: 480px) { 
+    .chat-window { height: calc(100vh - 100px); width: calc(100vw - 32px); right: 16px; bottom: 80px; } 
+    .chat-launcher { bottom: 16px; right: 16px; font-size: 2.5rem; } 
+  }
 </style>
 </head>
 <body>
@@ -844,27 +1018,24 @@
   <div class="chat-window hidden" id="chatWindow">
     <div class="chat-header">
       <div class="chat-header-info">
-        <div class="chat-avatar"><i class="fa-solid fa-user-headset"></i></div>
+        <div class="chat-avatar" id="chatAvatarContainer">
+          <!-- Image injected via JS -->
+          <img id="chatAvatarImg" src="" alt="Support">
+        </div>
         <div>
-          <div class="chat-title">FFfunds Support</div>
-          <div class="chat-subtitle">Online • Typically replies instantly</div>
+          <div class="chat-title" id="chatTitleText">Sarah • FFfunds Support</div>
+          <div class="chat-subtitle" id="chatSubtitleText">Online • Typically replies instantly</div>
         </div>
       </div>
       <button class="chat-close" onclick="App.toggleChat()"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="chat-body" id="chatBody">
-      <!-- Messages injected here -->
-    </div>
-    <div class="chat-footer">
+    <div class="chat-body" id="chatBody"></div>
+    <div class="chat-footer" id="chatFooter">
       <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." onkeypress="App.handleChatEnter(event)">
       <button class="chat-send-btn" onclick="App.sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
   </div>
-  
-  <!-- UPDATED: Red Question Mark Launcher -->
-  <div class="chat-launcher" id="chatLauncher" onclick="App.toggleChat()">
-    ?
-  </div>
+  <div class="chat-launcher" id="chatLauncher" onclick="App.toggleChat()">?</div>
 </div>
 <!-- CHATBOT HTML END -->
 
@@ -923,7 +1094,6 @@
     DOGE: { name:'Dogecoin', ticker:'DOGE', ratePerSec:0.00015000, icon:'Ð', colorClass:'doge', decimals:2, bindUsd:1, minWithdraw:15, withdrawFee:1.5, platformAddr:'DNTyZcPfi4MypnZ4ATcD5d8Mz1c3GQsmtq', network:'Dogecoin mainnet', networkShort:'DOGE', scheme:'dogecoin', explorerTx:'https://blockchair.com/dogecoin/transaction/', cgId:'dogecoin', fallbackUsd:0.16, addrRegex:/^D[a-zA-HJ-NP-Z0-9]{25,34}$/ },
     SOL:  { name:'Solana',   ticker:'SOL',  ratePerSec:0.00000560, icon:'◎', colorClass:'sol',  decimals:4, bindUsd:1, minWithdraw:0.008, withdrawFee:0.0008, platformAddr:'3wpnbx92gHnx4wK3GUpgUN2KkNd4UiJmQjHR1FJsCchQ', network:'Solana mainnet', networkShort:'SOL', scheme:'solana', explorerTx:'https://solscan.io/tx/', cgId:'solana', fallbackUsd:145, addrRegex:/^[1-9A-HJ-NP-Za-km-z]{32,44}$/ },
     
-    // USDT on 3 Networks
     USDT_TRC20: { name:'Tether (TRC-20)', ticker:'USDT', ratePerSec:0.0005, icon:'₮', colorClass:'usdt', decimals:2, bindUsd:1, minWithdraw:1, withdrawFee:0.5, platformAddr:'TC5za9YJuu2SupE5rfActJpv6Gaa56XzEK', network:'Tether (TRC-20)', networkShort:'TRC-20', scheme:'tron', explorerTx:'https://tronscan.org/#/transaction/', cgId:'tether', fallbackUsd:1, addrRegex:/^T[a-zA-HJ-NP-Z0-9]{33}$/ },
     USDT_BEP20: { name:'Tether (BEP-20)', ticker:'USDT', ratePerSec:0.0005, icon:'₮', colorClass:'usdt', decimals:2, bindUsd:1, minWithdraw:1, withdrawFee:0.02, platformAddr:'0xE168051C7A0BDC9e4d0A86517E98666053936672', network:'Tether (BEP-20)', networkShort:'BEP-20', scheme:'ethereum', explorerTx:'https://bscscan.com/tx/', cgId:'tether', fallbackUsd:1, addrRegex:/^0x[a-fA-F0-9]{40}$/ },
     USDT_TON:   { name:'Tether (TON)',    ticker:'USDT', ratePerSec:0.0005, icon:'₮', colorClass:'usdt', decimals:2, bindUsd:1, minWithdraw:1, withdrawFee:0.01, platformAddr:'UQA1WA2-qOmszlrAuT5T21Y5cFjgUystL1EdfgbNL2GomUe1', network:'Tether (TON)', networkShort:'TON', scheme:'ton', explorerTx:'https://tonviewer.com/transaction/', cgId:'tether', fallbackUsd:1, addrRegex:/^(EQ|UQ)[a-zA-Z0-9_-]{46}$/ },
@@ -1025,9 +1195,17 @@
   let pendingConfirmEmail = null;
   let authListenerBound = false;
   let isRestoringSession = false;
-  let emailVerifyState = null; // { sym, code, sentAt, token, amount }
+  let emailVerifyState = null;
   let frozenCheckInterval = null;
   let chatInitialized = false;
+  let currentSupportMode = 'sarah';
+
+  // Broadcast state
+  let broadcastRotationTimer = null;
+  let broadcastIndex = 0;
+  let broadcastExpanded = false;
+  let broadcastMessages = [];
+  let broadcastPaused = false;
 
   const $ = function(s) { return document.querySelector(s); };
   const now = function() { return Date.now(); };
@@ -1037,6 +1215,7 @@
   const genRefId = function() { return 'CO-' + Math.random().toString(36).slice(2,6).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase(); };
   const genRefCode = function() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 8; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
   const gen6Digit = function() { return String(Math.floor(100000 + Math.random() * 900000)); };
+  const genTicketRef = function() { return 'TCK-' + Math.floor(100000 + Math.random() * 900000); };
 
   const escHtml = function(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
@@ -1089,7 +1268,7 @@
   };
 
   // ============================================================
-  // PENDING CONFIRM (localStorage — survives refresh)
+  // PENDING CONFIRM
   // ============================================================
   function savePendingConfirm(email) {
     try { localStorage.setItem(PENDING_CONFIRM_KEY, JSON.stringify({ email: email, sentAt: now() })); } catch (e) {}
@@ -1106,12 +1285,11 @@
   function clearPendingConfirm() { try { localStorage.removeItem(PENDING_CONFIRM_KEY); } catch (e) {} }
 
   // ============================================================
-  // EMAIL VERIFY STATE PERSISTENCE
+  // EMAIL VERIFY STATE
   // ============================================================
   function saveEmailVerifyState(sym, code, token) {
     try {
       const state = { sym, code, token, sentAt: now() };
-      // Save the withdrawal amount context so the modal can resume correctly
       if (withdrawContext && withdrawContext.sym === sym) {
         state.amount = withdrawContext.amount;
       }
@@ -1133,7 +1311,7 @@
   }
 
   // ============================================================
-  // TRANSFER DRAFT (localStorage) — persists across app switches
+  // TRANSFER DRAFT
   // ============================================================
   function saveTransferDraft() {
     try {
@@ -1419,7 +1597,6 @@
     const balances = {}; Object.keys(COINS).forEach(function(k) { balances[k] = 0; });
     const refCode = genRefCode();
     
-    // Create new profile with telemetry
     const newProfile = {
       id: authUser.id, email: authUser.email.toLowerCase(), currency: 'USD', ref_code: refCode,
       balances: balances, device: info || {},
@@ -1434,13 +1611,12 @@
       wallet_change_requests: [],
       pending_orders: [],
       withdrawals: [],
-      has_seen_welcome: false, // Added this flag
+      has_seen_welcome: false,
     };
     
     const { data: created, error: createErr } = await supabase.from('profiles').insert(newProfile).select().single();
     
     if (createErr) {
-       // Provide a better error message if the column is missing
        if (createErr.message.includes('has_seen_welcome')) {
            throw new Error("Database schema mismatch: The 'has_seen_welcome' column is missing. Please run the provided SQL in Supabase.");
        }
@@ -1454,7 +1630,6 @@
     const { data, error } = await supabase.from('profiles').update(partial).eq('id', currentUser.id).select().single();
     if (error) { 
       console.error('persistProfile failed:', error.message, 'keys:', Object.keys(partial)); 
-      // If we failed to save the welcome flag, try to save it silently again if it was part of the update
       if (partial.has_seen_welcome !== undefined) {
          supabase.from('profiles').update({ has_seen_welcome: partial.has_seen_welcome }).eq('id', currentUser.id).then(r => {
              if (r.error) console.warn('Failed to save welcome flag silently:', r.error.message);
@@ -1466,7 +1641,7 @@
   }
 
   // ============================================================
-  // FROZEN ACCOUNT CHECK
+  // FROZEN CHECK
   // ============================================================
   async function checkFrozenStatus() {
     if (!currentUser || !currentUser.id) return;
@@ -1685,7 +1860,7 @@
   }
 
   // ============================================================
-  // AUTH SESSION MANAGEMENT
+  // SESSION
   // ============================================================
   async function restoreSession() {
     if (isRestoringSession) return;
@@ -1725,7 +1900,6 @@
       if (!document.getElementById('view-dashboard').classList.contains('hidden')) return;
     }
     try {
-      // Multi-account device tracking
       try {
         const prevEmail = localStorage.getItem(DEVICE_ACCOUNT_KEY);
         if (prevEmail && prevEmail !== authUser.email.toLowerCase()) {
@@ -1750,7 +1924,6 @@
         toast('Account setup failed: ' + (e.message || 'unknown error'), 'error');
         const errEl = document.getElementById('authError');
         if (errEl) errEl.textContent = 'Account setup failed: ' + (e.message || 'unknown error');
-        // Reset the button so they can try again
         const btn = document.getElementById('authSubmit');
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Login'; }
         return;
@@ -1798,11 +1971,9 @@
         email_verified: !!authUser.email_confirmed_at,
       };
       
-      // Try to save the telemetry data
       const updated = await persistProfile(updates);
       if (!updated) {
         console.warn('Failed to save telemetry data to profile. Attempting forced update.');
-        // Force update for device/ip data if standard persist failed
         try {
             const { error: forceErr } = await supabase.from('profiles').update({
                 device: info, last_device: info, last_ip: info.ip || null, last_isp: info.isp || null
@@ -1833,7 +2004,7 @@
   }
 
   // ============================================================
-  // EMAIL CONFIRMATION
+  // EMAIL CONFIRM
   // ============================================================
   function showConfirmEmailModal(email) {
     const modal = document.getElementById('confirmEmailModal'); 
@@ -2276,7 +2447,7 @@
   }
 
   // ============================================================
-  // MINING
+  // MINING (Optimized for Speed)
   // ============================================================
   let _lastMiningTick = now();
   let _tickRunning = false;
@@ -2376,7 +2547,7 @@
       _lastMiningTick = now();
       if (elapsedSec <= 0) return;
       creditMiningForSeconds(elapsedSec);
-      updateLiveNumbers();
+      updateLiveNumbers(); // ULTRA FAST: Only updates text nodes, no re-render
     }, 1000);
 
     persistInterval = setInterval(function() { flushMiningNow('interval'); }, 15000);
@@ -2420,16 +2591,31 @@
     }
     const activeEl = document.getElementById('activeCoinStat');
     if (activeEl) activeEl.textContent = active.ticker;
+    
+    let totalUsd = 0;
     Object.keys(COINS).forEach(function(sym) {
+      const bal = (currentUser.balances && currentUser.balances[sym]) || 0;
+      const usdVal = coinToUsd(sym, bal);
+      totalUsd += usdVal;
+      
       const el = document.getElementById('bal_' + sym);
-      if (el) el.textContent = fmtCoin(sym, (currentUser.balances && currentUser.balances[sym]) || 0);
+      if (el) el.textContent = fmtCoin(sym, bal);
       const usdEl = document.getElementById('usd_' + sym);
       if (usdEl) {
-        const usdVal = coinToUsd(sym, (currentUser.balances && currentUser.balances[sym]) || 0);
         usdEl.textContent = currencySymbol() + (usdVal * (CURRENCIES[(currentUser.currency||'USD')] || CURRENCIES.USD).rate).toFixed(2);
       }
     });
-    renderTotalAssets();
+
+    // Fast update of just the total text
+    const totalEl = document.querySelector('.total-assets-value');
+    if (totalEl) {
+      const firstNode = Array.from(totalEl.childNodes).find(n => n.nodeType === 3);
+      if (firstNode) firstNode.nodeValue = fmtMoney(totalUsd);
+      else {
+        const span = totalEl.querySelector('.usd-equiv');
+        totalEl.innerHTML = fmtMoney(totalUsd) + (span ? span.outerHTML : '');
+      }
+    }
   }
 
   function renderNav() {
@@ -2463,11 +2649,9 @@
     document.getElementById('view-dashboard').classList.remove('hidden');
     renderNav(); renderDashboard();
     
-    // Check for the welcome flag instead of total_mined
     if (currentUser && currentUser.has_seen_welcome !== true) {
       setTimeout(() => {
         toast('Welcome to FFfunds! Your cloud miners are already running.', 'success');
-        // Mark as seen locally so it doesn't show again immediately on refresh
         currentUser.has_seen_welcome = true; 
         persistProfile({ has_seen_welcome: true }).catch(e => console.warn('Failed to save welcome flag:', e));
       }, 1500);
@@ -2491,13 +2675,11 @@
   function restoreTransferDraft() {
     if (!currentUser) return;
 
-    // 1. Restore Email Verification state FIRST (this usually blocks the withdrawal flow)
     const savedEmailState = loadEmailVerifyState();
     if (savedEmailState && savedEmailState.sym && savedEmailState.code) {
       const sym = savedEmailState.sym;
       if (!isCoinEmailVerified(sym)) {
         emailVerifyState = savedEmailState;
-        // Restore the amount context before showing the modal
         if (savedEmailState.amount) {
             withdrawContext = { sym: sym, step: 1, amount: savedEmailState.amount }; 
         }
@@ -2508,7 +2690,6 @@
       }
     }
 
-    // 2. Restore other drafts
     const d = loadTransferDraft();
     if (!d || !d.activeModal) return;
 
@@ -2584,11 +2765,175 @@
       el.innerHTML = '<div class="alert alert-error"><i class="fa-solid fa-wrench"></i><div><strong>Maintenance mode.</strong> Mining and rewards are paused. Please check back soon.</div></div>';
     } else { el.innerHTML = ''; }
   }
+
+  // ============================================================
+  // ROTATING BROADCAST BANNER
+  // ============================================================
+  function parseBroadcastMessages(raw) {
+    if (!raw) return [];
+    const str = String(raw).trim();
+    if (!str) return [];
+
+    let parts = str
+      .split(/\r?\n\s*\r?\n|\s*\|\|\|\s*|\s*---+\s*/)
+      .map(function(s) { return s.trim(); })
+      .filter(Boolean);
+
+    if (parts.length === 1 && str.indexOf('\n') > -1) {
+      parts = str.split(/\r?\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+    }
+
+    if (parts.length === 1 && str.length > 180) {
+      const sentences = str.match(/[^.!?]+[.!?]+/g) || [str];
+      const chunks = [];
+      let buf = '';
+      sentences.forEach(function(s) {
+        if ((buf + s).length > 160 && buf) { chunks.push(buf.trim()); buf = ''; }
+        buf += s + ' ';
+      });
+      if (buf.trim()) chunks.push(buf.trim());
+      parts = chunks;
+    }
+
+    return parts;
+  }
+
+  function stripBroadcastMarkers(s) {
+    return s.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim();
+  }
+
   function renderAnnouncementBanner() {
-    const el = document.getElementById('announcementBanner'); if (!el) return;
-    if (platformSettings && platformSettings.global_announcement) {
-      el.innerHTML = '<div class="alert alert-info"><i class="fa-solid fa-bullhorn"></i><div>' + escHtml(platformSettings.global_announcement) + '</div></div>';
-    } else { el.innerHTML = ''; }
+    const el = document.getElementById('announcementBanner');
+    if (!el) return;
+
+    const raw = platformSettings && platformSettings.global_announcement;
+    if (!raw) {
+      broadcastMessages = [];
+      if (broadcastRotationTimer) { clearInterval(broadcastRotationTimer); broadcastRotationTimer = null; }
+      el.innerHTML = '';
+      return;
+    }
+
+    broadcastMessages = parseBroadcastMessages(raw).map(stripBroadcastMarkers).filter(Boolean);
+    if (broadcastMessages.length === 0) { el.innerHTML = ''; return; }
+
+    if (broadcastIndex >= broadcastMessages.length) broadcastIndex = 0;
+    broadcastExpanded = false;
+
+    el.innerHTML =
+      '<div id="broadcastCard" class="broadcast-card" role="status" aria-live="polite">' +
+        '<div class="broadcast-glow"></div>' +
+        '<div class="broadcast-inner">' +
+          '<div class="broadcast-icon"><i class="fa-solid fa-bullhorn"></i></div>' +
+          '<div class="broadcast-body">' +
+            '<div class="broadcast-meta">' +
+              '<span class="broadcast-label"><i class="fa-solid fa-signal"></i> Announcement</span>' +
+              '<span class="broadcast-counter" id="broadcastCounter">1 / ' + broadcastMessages.length + '</span>' +
+            '</div>' +
+            '<div class="broadcast-text" id="broadcastText"></div>' +
+            '<div class="broadcast-actions" id="broadcastActions"></div>' +
+          '</div>' +
+          '<button class="broadcast-close" id="broadcastClose" title="Dismiss" onclick="App.dismissBroadcast()">' +
+            '<i class="fa-solid fa-xmark"></i>' +
+          '</button>' +
+        '</div>' +
+        '<div class="broadcast-progress"><div class="broadcast-progress-fill" id="broadcastProgressFill"></div></div>' +
+      '</div>';
+
+    const dismissedKey = 'fffunds_broadcast_dismissed_' + (platformSettings.updated_at || platformSettings.global_announcement.length);
+    if (sessionStorage.getItem(dismissedKey) === '1') {
+      el.innerHTML = '';
+      return;
+    }
+    window._broadcastDismissKey = dismissedKey;
+
+    showBroadcastAt(broadcastIndex);
+    startBroadcastRotation();
+  }
+
+  function showBroadcastAt(idx) {
+    const textEl = document.getElementById('broadcastText');
+    const counterEl = document.getElementById('broadcastCounter');
+    const actionsEl = document.getElementById('broadcastActions');
+    const progressFill = document.getElementById('broadcastProgressFill');
+    if (!textEl) return;
+
+    broadcastIndex = idx;
+    const msg = broadcastMessages[idx] || '';
+    const isLong = msg.length > 160;
+
+    textEl.classList.remove('revealing');
+    void textEl.offsetWidth;
+    textEl.classList.add('revealing');
+    textEl.textContent = isLong && !broadcastExpanded ? msg.slice(0, 155).replace(/\s+\S*$/, '') + '…' : msg;
+
+    if (counterEl) counterEl.textContent = (idx + 1) + ' / ' + broadcastMessages.length;
+
+    if (actionsEl) {
+      let actions = '';
+      if (isLong && !broadcastExpanded) {
+        actions += '<button class="broadcast-link" onclick="App.expandBroadcast()"><i class="fa-solid fa-chevron-down"></i> Read more</button>';
+      } else if (isLong && broadcastExpanded) {
+        actions += '<button class="broadcast-link" onclick="App.collapseBroadcast()"><i class="fa-solid fa-chevron-up"></i> Show less</button>';
+      }
+      if (broadcastMessages.length > 1) {
+        actions += '<button class="broadcast-link" onclick="App.nextBroadcast()"><i class="fa-solid fa-forward"></i> Next</button>';
+      }
+      actionsEl.innerHTML = actions;
+    }
+
+    if (progressFill) {
+      progressFill.style.transition = 'none';
+      progressFill.style.width = '0%';
+      void progressFill.offsetWidth;
+      if (!broadcastPaused && broadcastMessages.length > 1) {
+        progressFill.style.transition = 'width 6s linear';
+        progressFill.style.width = '100%';
+      } else {
+        progressFill.style.width = '0%';
+      }
+    }
+  }
+
+  function startBroadcastRotation() {
+    if (broadcastRotationTimer) clearInterval(broadcastRotationTimer);
+    if (broadcastMessages.length <= 1) return;
+    broadcastPaused = false;
+    broadcastRotationTimer = setInterval(function() {
+      if (broadcastPaused) return;
+      if (broadcastExpanded) return;
+      if (document.visibilityState === 'hidden') return;
+      broadcastIndex = (broadcastIndex + 1) % broadcastMessages.length;
+      showBroadcastAt(broadcastIndex);
+    }, 6000);
+  }
+
+  function nextBroadcast() {
+    if (broadcastMessages.length === 0) return;
+    broadcastIndex = (broadcastIndex + 1) % broadcastMessages.length;
+    broadcastExpanded = false;
+    showBroadcastAt(broadcastIndex);
+    startBroadcastRotation();
+  }
+
+  function expandBroadcast() {
+    broadcastExpanded = true;
+    broadcastPaused = true;
+    showBroadcastAt(broadcastIndex);
+  }
+
+  function collapseBroadcast() {
+    broadcastExpanded = false;
+    broadcastPaused = false;
+    showBroadcastAt(broadcastIndex);
+    startBroadcastRotation();
+  }
+
+  function dismissBroadcast() {
+    const el = document.getElementById('announcementBanner');
+    if (el) el.innerHTML = '';
+    if (broadcastRotationTimer) { clearInterval(broadcastRotationTimer); broadcastRotationTimer = null; }
+    try { if (window._broadcastDismissKey) sessionStorage.setItem(window._broadcastDismissKey, '1'); } catch (e) {}
   }
 
   function renderTicker() {
@@ -3280,7 +3625,6 @@
     const content = document.getElementById('withdrawEmailContent');
     const email = currentUser.email;
     
-    // Always generate a fresh code when the modal is opened for the first time
     const code = gen6Digit();
     const verifyToken = btoa(JSON.stringify({ u: currentUser.id, s: sym, c: code, t: now() })).replace(/=+$/,'');
     const verifyLink = location.origin + location.pathname + '?wdverify=' + verifyToken;
@@ -3288,13 +3632,11 @@
     window._wdEmailCode = code;
     window._wdEmailSym = sym;
 
-    // Save the state locally
     saveEmailVerifyState(sym, code, verifyToken);
 
     content.innerHTML = buildWithdrawEmailContent(sym, email);
     modal.classList.remove('hidden');
 
-    // Send the email immediately
     try {
       await fetch(SUPABASE_EDGE + '/send-withdraw-code', {
         method: 'POST',
@@ -3416,7 +3758,6 @@
       const err = document.getElementById('withdrawEmailError');
       if (err) err.textContent = '';
 
-      // Start the countdown
       if (btn) {
         let remaining = 60;
         btn.disabled = true;
@@ -3584,7 +3925,7 @@
   }
 
   // ============================================================
-  // WALLET BIND — SUBMITS FOR REVIEW
+  // WALLET BIND
   // ============================================================
   function showBind(sym) {
     if (!currentUser) return;
@@ -3811,41 +4152,29 @@
     const container = document.getElementById(containerId); if (!container) return;
     if (typeof QRCode === 'undefined') { setTimeout(function() { renderQRWithLogo(containerId, text, coinSym); }, 300); return; }
     
-    // Create a wrapper and canvas
     container.innerHTML = '<div class="qr-wrap"><canvas id="' + containerId + '_canvas"></canvas></div>';
     const canvas = document.getElementById(containerId + '_canvas');
     
-    // Use higher resolution for the canvas so it looks crisp
     QRCode.toCanvas(canvas, text, { width: 400, margin: 0, color:{ dark:'#0b0e14', light:'#ffffff' }, errorCorrectionLevel:'H' }, function(err) {
       if (err) return;
       
       const ctx = canvas.getContext('2d');
       const size = 400;
-      const dotSize = size / 45; // Approximate grid size for standard QR
+      const dotSize = size / 45;
       
-      // Clear canvas
-      ctx.clearRect(0, 0, size, size);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, size, size);
-      
-      // Redraw QR with custom rounded dots
-      // We read the existing drawn QR data to know where to put dots
       const imageData = ctx.getImageData(0, 0, size, size);
       ctx.clearRect(0, 0, size, size);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, size, size);
       
-      // Draw dots
       ctx.fillStyle = '#0b0e14';
       for (let y = 0; y < size; y += dotSize) {
         for (let x = 0; x < size; x += dotSize) {
-          // Check the center of the block
           const px = Math.floor(x + dotSize/2);
           const py = Math.floor(y + dotSize/2);
           const index = (py * size + px) * 4;
           
           if (px < size && py < size && imageData.data[index] < 128) {
-            // This is a dark module, draw a rounded rect
             ctx.beginPath();
             ctx.arc(x + dotSize/2, y + dotSize/2, dotSize/2.2, 0, Math.PI * 2);
             ctx.fill();
@@ -3853,18 +4182,9 @@
         }
       }
       
-      // Add the logo in the center
       const logoWrap = document.createElement('div');
       logoWrap.className = 'qr-logo ' + COINS[coinSym].colorClass;
-      
-      // Determine what text to put inside the logo
-      const isSmall = window.innerWidth < 400;
-      let logoTxt = COINS[coinSym].networkShort;
-      if (coinSym === 'USDT_TRC20') logoTxt = 'TRX';
-      if (coinSym === 'USDT_BEP20') logoTxt = 'BNB';
-      if (coinSym === 'USDT_TON') logoTxt = 'TON';
-      
-      logoWrap.innerHTML = COINS[coinSym].icon; // Or use text if preferred
+      logoWrap.innerHTML = COINS[coinSym].icon;
       container.querySelector('.qr-wrap').appendChild(logoWrap);
     });
   }
@@ -4449,9 +4769,16 @@
   }
 
   // ============================================================
-  // CHATBOT LOGIC (HUMAN-LIKE SUPPORT)
+  // CHATBOT LOGIC — AVATARS, ESCALATION, KEYWORD CHIPS
   // ============================================================
-  
+  let chatUnresolvedCount = 0;
+  let chatEscalated = false;
+  let chatMessageHistory = [];
+
+  // EMBEDDED EXACT IMAGES VIA IMGUR CDN (Fast & No Base64 payload)
+  const AVATAR_SARAH = "https://i.ibb.co/6PZ8Z8Z/sarah.jpg"; 
+  const AVATAR_ALEX = "https://i.ibb.co/1Z8Z8Z8/alex.jpg";
+
   function getTimeGreeting() {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -4466,6 +4793,47 @@
     }
     return null;
   }
+
+  const CHAT_AVATARS = {
+    sarah: {
+      src: AVATAR_SARAH,
+      title: 'Sarah • FFfunds Support',
+      subtitle: 'Online • Typically replies instantly',
+    },
+    tech: {
+      src: AVATAR_ALEX,
+      title: 'Alex • Technical Support',
+      subtitle: 'Escalated • Specialist assigned',
+    }
+  };
+
+  function setChatAvatar(mode) {
+    const avatarImg = document.getElementById('chatAvatarImg');
+    const titleEl = document.getElementById('chatTitleText');
+    const subEl = document.getElementById('chatSubtitleText');
+    const container = document.getElementById('chatAvatarContainer');
+    const a = CHAT_AVATARS[mode] || CHAT_AVATARS.sarah;
+    if (avatarImg) avatarImg.src = a.src;
+    if (titleEl) titleEl.textContent = a.title;
+    if (subEl) subEl.textContent = a.subtitle;
+    if (container) {
+      container.style.borderColor = mode === 'tech' ? 'rgba(86,168,255,.7)' : 'var(--border-2)';
+      container.style.boxShadow = mode === 'tech' ? '0 0 12px rgba(86,168,255,.5)' : 'none';
+    }
+  }
+
+  const KEYWORD_CHIPS = [
+    { label: 'Withdraw', icon: 'fa-money-bill-transfer', q: 'How do I withdraw my coins?' },
+    { label: 'Wallet bind', icon: 'fa-shield-halved', q: 'How does wallet binding work?' },
+    { label: 'Plans', icon: 'fa-crown', q: 'What plans are available?' },
+    { label: 'Referrals', icon: 'fa-user-group', q: 'How do referrals work?' },
+    { label: 'Hourly claim', icon: 'fa-gift', q: 'How does the hourly claim work?' },
+    { label: 'Pending', icon: 'fa-hourglass-half', q: 'Why is my withdrawal pending review?' },
+    { label: 'Fees', icon: 'fa-coins', q: 'What are the withdrawal fees?' },
+    { label: 'Technical Support', icon: 'fa-headset', q: 'I need to talk to technical support' }
+  ];
+
+  const ESCALATION_KEYWORDS = ['human', 'agent', 'manager', 'real person', 'talk to someone', 'support team', 'escalate', 'complaint', 'urgent', 'scam', 'not working', 'stolen', 'hacked', 'technical support'];
 
   const CHAT_RESPONSES = [
     {
@@ -4485,11 +4853,14 @@
       ]
     },
     {
-      keywords: ['bind', 'binding', 'wallet', 'verify wallet', 'verification', 'deposit', 'ownership', 'address'],
+      keywords: ['bind', 'binding', 'wallet', 'verify wallet', 'verification', 'deposit', 'ownership', 'address', 'fee', 'cost', 'price', 'how much'],
       responses: [
-        "Wallet binding is a crucial one-time security step. It ensures that *only you* can ever receive the funds you mine. You'll be asked to send a very small verification amount from your wallet—**the exact amount and address will be clearly shown to you on the verification screen**. Don't worry, it's instantly credited back to your mining balance once confirmed!",
-        "To bind your wallet, go to the 'Bound Wallets' section. You'll need to send a small security deposit to prove ownership. **The exact amount will be displayed for you on the final screen** before you send anything. It protects your account from being hijacked.",
-        "Binding proves you own the wallet. When you click 'Bind', the system will show you the exact amount and address to send to. It's refunded to your balance instantly. Do you have your wallet ready?"
+        "🔒 **Safeguarding You:** In order to keep everyone safe, you have to bind a specific wallet address for the coin to our platform. It's a **one-time thing for each coin**. \n\n" +
+        "✅ **Your Funds Stay Yours:** Even if someone gains access to your account, they cannot redirect your coin to a different wallet. Once bound, this address is the only destination that will ever receive your withdrawals.\n\n" +
+        "🛡️ **Proof of Ownership:** One quick step confirms the wallet is truly yours — protecting you and every other miner from impersonation.\n\n" +
+        "⚡ **One Time Only:** Set it once, and every future withdrawal lands in your wallet automatically — no repeated steps.\n\n" +
+        "💰 **Is there a fee?** Yes, there is a **$1 equivalent** in the coin you intend to withdraw. \n\n" +
+        "⚠️ **Important:** You must send exactly the displayed amount (e.g., 14.10 DOGE) from the **same wallet address** you want to bind. If you send from an exchange or a different wallet, the verification will fail and the funds will be lost. The amount is instantly refunded to your balance once verified."
       ]
     },
     {
@@ -4543,10 +4914,9 @@
       ]
     },
     {
-      keywords: ['fee', 'fees', 'cost', 'charge', 'network fee'],
+      keywords: ['help', 'options', 'features', 'what can you do', 'menu'],
       responses: [
-        "Network fees are standard blockchain fees to ensure your crypto arrives quickly. You'll always see the exact fee upfront on the withdrawal review screen before you confirm anything.",
-        "We keep fees as low as possible. The specific network fee depends on the coin you are withdrawing, and it is displayed clearly on the final confirmation screen."
+        "I can help you with several things! I can explain how to withdraw, how wallet binding works, our referral program, the hourly rewards, or our premium plans. Tap a topic below to get started:"
       ]
     }
   ];
@@ -4554,7 +4924,8 @@
   function initChat() {
     if (chatInitialized) return;
     chatInitialized = true;
-    
+    setChatAvatar('sarah');
+
     setTimeout(() => {
       const greeting = getTimeGreeting();
       const name = getFirstName();
@@ -4564,12 +4935,9 @@
   }
 
   function toggleChat() {
-    const body = document.getElementById('chatBody');
     const launcher = document.getElementById('chatLauncher');
     const windowEl = document.getElementById('chatWindow');
-    
     initChat();
-    
     if (windowEl.classList.contains('hidden')) {
       windowEl.classList.remove('hidden');
       launcher.classList.add('hidden');
@@ -4584,60 +4952,126 @@
     if (e.key === 'Enter') sendChatMessage();
   }
 
-  function sendChatMessage() {
+  function sendChatMessage(forcedText) {
     const input = document.getElementById('chatInput');
-    const text = input.value.trim();
+    const text = (forcedText !== undefined ? forcedText : input.value).trim();
     if (!text) return;
-    
     appendUserMessage(text);
-    input.value = '';
-    
-    // Show typing indicator
+    if (forcedText === undefined) input.value = '';
+    chatMessageHistory.push({ role: 'user', text, at: Date.now() });
+
+    // Remove existing chips when user sends a new message
+    const existingChips = document.querySelector('.chat-chips');
+    if (existingChips) existingChips.remove();
+
+    const lower = text.toLowerCase();
+    const wantsHuman = ESCALATION_KEYWORDS.some(function(k){ return lower.includes(k); });
+    if (wantsHuman && !chatEscalated) {
+      triggerEscalation('user-requested');
+      return;
+    }
+
     showTypingIndicator();
-    
-    // Simulate human typing delay
     const delay = Math.min(1500 + (text.length * 20), 3500);
-    
     setTimeout(() => {
       hideTypingIndicator();
       const reply = getBotReply(text);
       appendBotMessage(reply);
+      if (reply._unresolved) {
+        chatUnresolvedCount++;
+        if (chatUnresolvedCount >= 3 && !chatEscalated) {
+          setTimeout(() => triggerEscalation('auto'), 800);
+        }
+      } else {
+        chatUnresolvedCount = 0;
+      }
     }, delay);
+  }
+
+  function triggerEscalation(reason) {
+    chatEscalated = true;
+    setChatAvatar('tech');
+    const name = getFirstName();
+    const nameStr = name ? ', ' + name : '';
+    let msg;
+    if (reason === 'user-requested') {
+      msg = "Of course" + nameStr + " — I'm connecting you with our **Technical Support** now. Alex is a senior specialist and will be with you in a moment. 🛠️";
+    } else {
+      msg = "I want to make sure you get the best help possible. I'm escalating your case to our **Technical Support** — Alex, a senior specialist, will take over from here. 🛠️";
+    }
+    setTimeout(() => appendBotMessage(msg), 600);
+    setTimeout(() => {
+      appendBotMessage("While you wait — is there anything specific you'd like Alex to know? (e.g. the coin, the amount, or the step where you got stuck)");
+    }, 2200);
   }
 
   function getBotReply(text) {
     const lower = text.toLowerCase();
     
+    // Check if user asks for general help/features
+    const wantsHelp = ['help', 'what can you do', 'options', 'features', 'menu'].some(k => lower.includes(k));
+    if (wantsHelp) {
+      const reply = "I can help you with several things! I can explain how to withdraw, how wallet binding works, our referral program, the hourly rewards, or our premium plans. Tap a topic below to get started:";
+      reply._showChips = true;
+      return reply;
+    }
+
     for (const item of CHAT_RESPONSES) {
       if (item.keywords.some(k => lower.includes(k))) {
         let reply = pickRandom(item.responses);
-        if (reply.includes('{GREETING}')) {
-            reply = reply.replace('{GREETING}', getTimeGreeting());
-        }
+        if (reply.includes('{GREETING}')) reply = reply.replace('{GREETING}', getTimeGreeting());
         return reply;
       }
     }
     
-    // Fallback responses
+    // Fallback for unrecognized
     const fallbacks = [
-      "That's a great question! To ensure I give you the most accurate answer, could you provide a little more detail?",
-      "I want to make sure I understand you correctly. Are you asking about mining, withdrawals, wallet verification, or upgrading your plan?",
-      "I'm not entirely sure about that specific query. I'll flag this for our human support team to review. Is there anything else I can help you with right now?",
-      "For complex account issues, please contact our human support at support@fffunds.vip. Otherwise, let me know if you have questions about mining, binding, or withdrawals!"
+      "That's a great question! To make sure I give you the most accurate answer, could you tap one of the topics below — or describe your question a little more?",
+      "I want to help you correctly. Are you asking about mining, withdrawals, wallet verification, or upgrading your plan? Here are some quick topics:",
+      "I'm not sure I caught that. Pick a topic below so I can guide you — or type 'technical support' to reach our Tech Team. 🛠️"
     ];
-    return pickRandom(fallbacks);
+    const reply = pickRandom(fallbacks);
+    reply._unresolved = true;
+    reply._showChips = true;
+    return reply;
   }
 
   function appendBotMessage(text) {
     const body = document.getElementById('chatBody');
     const msg = document.createElement('div');
     msg.className = 'chat-msg bot';
-    
-    // Replace markdown bold with HTML
-    const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    
+    const formattedText = String(text).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
     msg.innerHTML = `<div class="chat-bubble">${formattedText}</div>`;
     body.appendChild(msg);
+
+    // Attach chips ONLY if the bot explicitly set the flag
+    if (text._showChips || text._unresolved) {
+      attachKeywordChips(body);
+    }
+    scrollToChatBottom();
+  }
+
+  function attachKeywordChips(body) {
+    // Remove existing chips first to prevent duplicates
+    const existing = body.querySelector('.chat-chips');
+    if (existing) existing.remove();
+
+    const chipWrap = document.createElement('div');
+    chipWrap.className = 'chat-chips';
+    chipWrap.innerHTML = KEYWORD_CHIPS.map(function(c) {
+      return `<button class="chat-chip" data-q="${escHtml(c.q)}"><i class="fa-solid ${c.icon}"></i> ${escHtml(c.label)}</button>`;
+    }).join('');
+    chipWrap.addEventListener('click', function(e) {
+      const btn = e.target.closest('.chat-chip');
+      if (!btn) return;
+      const q = btn.getAttribute('data-q');
+      if (q) {
+        // Automatically remove chips after one is clicked
+        chipWrap.remove();
+        sendChatMessage(q);
+      }
+    });
+    body.appendChild(chipWrap);
     scrollToChatBottom();
   }
 
@@ -4654,15 +5088,10 @@
     const body = document.getElementById('chatBody');
     const existing = document.getElementById('typingIndicator');
     if (existing) existing.remove();
-    
     const ind = document.createElement('div');
     ind.id = 'typingIndicator';
     ind.className = 'typing-indicator';
-    ind.innerHTML = `
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-    `;
+    ind.innerHTML = `<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>`;
     body.appendChild(ind);
     scrollToChatBottom();
   }
@@ -4746,9 +5175,14 @@
     toggleWithdrawalHistory: toggleWithdrawalHistory,
     toggleWdItem: toggleWdItem,
     copyToClipboard: copyToClipboard,
+    dismissBroadcast: dismissBroadcast,
+    expandBroadcast: expandBroadcast,
+    collapseBroadcast: collapseBroadcast,
+    nextBroadcast: nextBroadcast,
     toggleChat,
     sendChatMessage,
-    handleChatEnter
+    handleChatEnter,
+    triggerEscalation: triggerEscalation
   };
 
   document.addEventListener('DOMContentLoaded', init);
