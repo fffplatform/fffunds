@@ -1311,7 +1311,7 @@
   }
 
   // ============================================================
-  // TRANSFER DRAFT
+  // TRANSFER DRAFT (Persisting Exact Steps)
   // ============================================================
   function saveTransferDraft() {
     try {
@@ -4775,7 +4775,7 @@
   let chatEscalated = false;
   let chatMessageHistory = [];
 
-  // EMBEDDED EXACT IMAGES VIA IMGUR CDN (Fast & No Base64 payload)
+  // EMBEDDED EXACT IMAGES VIA CDN
   const AVATAR_SARAH = "https://i.ibb.co/6PZ8Z8Z/sarah.jpg"; 
   const AVATAR_ALEX = "https://i.ibb.co/1Z8Z8Z8/alex.jpg";
 
@@ -4835,9 +4835,10 @@
 
   const ESCALATION_KEYWORDS = ['human', 'agent', 'manager', 'real person', 'talk to someone', 'support team', 'escalate', 'complaint', 'urgent', 'scam', 'not working', 'stolen', 'hacked', 'technical support'];
 
+  // --- UPGRADED SMART CHAT RESPONSES ---
   const CHAT_RESPONSES = [
     {
-      keywords: ['hi', 'hello', 'hey', 'greetings', 'morning', 'afternoon', 'evening', 'start'],
+      keys: ['hi', 'hello', 'hey', 'greetings', 'morning', 'afternoon', 'evening', 'start'],
       responses: [
         "{GREETING}! How can I help you today? Are you looking to mine, withdraw, or check your plans?",
         "Hello! Welcome to FFfunds. I'm here to help with any questions about mining, withdrawals, or wallet binding. What do you need?",
@@ -4845,7 +4846,7 @@
       ]
     },
     {
-      keywords: ['withdraw', 'withdrawal', 'cash out', 'payout', 'send money', 'transfer'],
+      keys: ['how to withdraw', 'withdrawal process', 'how withdrawal works', 'request withdrawal', 'cash out'],
       responses: [
         "To withdraw, go to your dashboard and click the 'Withdraw' button on the coin card you want to cash out. Just make sure you meet the minimum withdrawal amount and have your withdrawal requirements unlocked!",
         "Withdrawals are processed manually within 24 hours. To request one, simply select the coin you want to withdraw and click the 'Withdraw' button. Note that your first withdrawal for any coin requires an email verification step.",
@@ -4853,18 +4854,32 @@
       ]
     },
     {
-      keywords: ['bind', 'binding', 'wallet', 'verify wallet', 'verification', 'deposit', 'ownership', 'address', 'fee', 'cost', 'price', 'how much'],
+      keys: ['wallet bind', 'binding process', 'how to bind wallet', 'binding mean', 'bind wallet', 'wallet verification', 'safeguard', 'proof of ownership'],
       responses: [
-        "🔒 **Safeguarding You:** In order to keep everyone safe, you have to bind a specific wallet address for the coin to our platform. It's a **one-time thing for each coin**. \n\n" +
+        "🔒 **Absolute Security:** In order to safeguard everyone, you must bind a specific wallet address for the coin to our platform. It's a **one-time thing for each coin**. \n\n" +
         "✅ **Your Funds Stay Yours:** Even if someone gains access to your account, they cannot redirect your coin to a different wallet. Once bound, this address is the only destination that will ever receive your withdrawals.\n\n" +
         "🛡️ **Proof of Ownership:** One quick step confirms the wallet is truly yours — protecting you and every other miner from impersonation.\n\n" +
         "⚡ **One Time Only:** Set it once, and every future withdrawal lands in your wallet automatically — no repeated steps.\n\n" +
-        "💰 **Is there a fee?** Yes, there is a **$1 equivalent** in the coin you intend to withdraw. \n\n" +
-        "⚠️ **Important:** You must send exactly the displayed amount (e.g., 14.10 DOGE) from the **same wallet address** you want to bind. If you send from an exchange or a different wallet, the verification will fail and the funds will be lost. The amount is instantly refunded to your balance once verified."
+        "When you click 'Bind', the system will show you the exact amount and address to send to. It's refunded to your balance instantly."
       ]
     },
     {
-      keywords: ['referral', 'refer', 'friend', 'link', 'affiliate', 'invite', 'share'],
+      keys: ['bind fee', 'wallet fee', 'cost to bind', 'binding cost', 'fee for binding', 'how much to bind', 'how much is the fee', 'whats the fee', 'fees'],
+      responses: [
+        "💰 **Binding Fee:** Yes, there is a **$1 equivalent** in the coin you intend to withdraw. \n\n" +
+        "⚠️ **Important:** You must send exactly the equivalent (e.g., 14.10 DOGE ≈ $1.00) from the **same wallet address** you want to bind. If you send from an exchange or a different wallet, the verification will fail and the funds will be lost. \n\n" +
+        "Don't worry, the $1 verification amount is instantly refunded to your mining balance once confirmed!"
+      ]
+    },
+    {
+      keys: ['withdrawal fee', 'network fee', 'gas fee', 'cost to withdraw', 'withdraw cost'],
+      responses: [
+        "Network fees are standard blockchain fees to ensure your crypto arrives quickly. You'll always see the exact fee upfront on the withdrawal review screen before you confirm anything.",
+        "We keep fees as low as possible. The specific network fee depends on the coin you are withdrawing, and it is displayed clearly on the final confirmation screen."
+      ]
+    },
+    {
+      keys: ['referral', 'refer', 'friend', 'link', 'affiliate', 'invite', 'share'],
       responses: [
         "You can find your unique referral link in the 'Refer & Earn' card on your dashboard. You earn a free spin on the $25–$60 Referral Wheel for every valid friend who signs up and mines!",
         "Referring friends is the best way to unlock free withdrawals. Go to the Refer & Earn section, copy your link, and share it. Once they join, you both get rewards!",
@@ -4872,49 +4887,49 @@
       ]
     },
     {
-      keywords: ['spin', 'wheel', 'lucky', 'prize'],
+      keys: ['spin', 'wheel', 'lucky', 'prize'],
       responses: [
         "You can spin the Lucky Wheel daily to win instant crypto bonuses or mining boosts! Look for the 'Lucky Wheel' button on your dashboard.",
         "Lucky Wheel spins reset daily. You can also earn extra spins by referring friends. Head to the dashboard to spin and win $2–$20 instantly!"
       ]
     },
     {
-      keywords: ['scam', 'legit', 'real', 'proof', 'payment', 'trust', 'safe', 'fake'],
+      keys: ['scam', 'legit', 'real', 'proof', 'payment', 'trust', 'safe', 'fake'],
       responses: [
         "We understand your concern. FFfunds has processed thousands of successful withdrawals. You can verify our platform by checking the transaction hashes (TXIDs) provided upon successful payouts. We are fully transparent and enforce strict anti-fraud rules.",
         "We are a legitimate cloud mining platform. To protect our users, we enforce strict anti-fraud and one-account-per-device rules, which ensures everyone gets their fair share of mining rewards."
       ]
     },
     {
-      keywords: ['not working', 'error', 'bug', 'problem', 'issue', 'stuck', 'fail', 'slow'],
+      keys: ['not working', 'error', 'bug', 'problem', 'issue', 'stuck', 'fail', 'slow'],
       responses: [
         "I'm sorry you're experiencing an issue. Please try refreshing the page or clearing your browser cache. If the problem persists, please describe exactly what happens so I can help.",
         "Let's get this sorted out. Could you tell me a bit more about the error? (e.g., is it during mining, claiming, or withdrawing?) If you have screenshots, our human team can review it at support@fffunds.vip."
       ]
     },
     {
-      keywords: ['plan', 'upgrade', 'bronze', 'silver', 'gold', 'platinum', 'subscription', 'tier', 'buy'],
+      keys: ['plan', 'upgrade', 'bronze', 'silver', 'gold', 'platinum', 'subscription', 'tier', 'buy'],
       responses: [
         "Upgrading to a paid plan (Bronze, Silver, Gold, or Platinum) instantly unlocks withdrawals without needing referrals and multiplies your mining speed by up to 55x! You can view plans in the dashboard menu.",
         "Our premium plans offer massive mining boosts and instant withdrawal access. Check the 'Plans' tab to see the pricing and benefits. Subscriptions are activated immediately after the crypto payment confirms."
       ]
     },
     {
-      keywords: ['hourly', 'claim', '$5', 'reward', 'free'],
+      keys: ['hourly', 'claim', '$5', 'reward', 'free'],
       responses: [
         "Every hour, you can claim a free reward (up to $5 worth of crypto) from the Hourly Reward banner on your dashboard. Make sure you don't miss it!",
         "The hourly claim resets every 60 minutes. Just click 'Claim Now' on the dashboard when the timer runs out to add free crypto to your balance."
       ]
     },
     {
-      keywords: ['pending', 'review', 'waiting', 'processing', 'admin'],
+      keys: ['pending', 'review', 'waiting', 'processing', 'admin'],
       responses: [
         "Pending withdrawals or wallet bindings are usually reviewed by our admin team within 1–24 hours. We manually review them to prevent fraud and keep the platform safe.",
         "If your transaction is 'Pending Review', it means our security team is verifying it. This usually takes a few hours, though it can take up to 24 hours during peak times. Rest assured, it's being handled!"
       ]
     },
     {
-      keywords: ['help', 'options', 'features', 'what can you do', 'menu'],
+      keys: ['help', 'options', 'features', 'what can you do', 'menu'],
       responses: [
         "I can help you with several things! I can explain how to withdraw, how wallet binding works, our referral program, the hourly rewards, or our premium plans. Tap a topic below to get started:"
       ]
@@ -5008,7 +5023,6 @@
   function getBotReply(text) {
     const lower = text.toLowerCase();
     
-    // Check if user asks for general help/features
     const wantsHelp = ['help', 'what can you do', 'options', 'features', 'menu'].some(k => lower.includes(k));
     if (wantsHelp) {
       const reply = "I can help you with several things! I can explain how to withdraw, how wallet binding works, our referral program, the hourly rewards, or our premium plans. Tap a topic below to get started:";
@@ -5016,15 +5030,31 @@
       return reply;
     }
 
+    // SCORING SYSTEM FOR ACCURATE INTENT MATCHING
+    let bestMatch = null;
+    let maxScore = 0;
+
     for (const item of CHAT_RESPONSES) {
-      if (item.keywords.some(k => lower.includes(k))) {
-        let reply = pickRandom(item.responses);
-        if (reply.includes('{GREETING}')) reply = reply.replace('{GREETING}', getTimeGreeting());
-        return reply;
+      let score = 0;
+      for (const key of item.keys) {
+        if (lower.includes(key)) {
+          // Longer keywords get higher priority. (e.g., "bind fee" beats just "bind")
+          score += key.length;
+        }
+      }
+      if (score > maxScore) {
+        maxScore = score;
+        bestMatch = item;
       }
     }
+
+    if (bestMatch) {
+      let reply = pickRandom(bestMatch.responses);
+      if (reply.includes('{GREETING}')) reply = reply.replace('{GREETING}', getTimeGreeting());
+      return reply;
+    }
     
-    // Fallback for unrecognized
+    // Fallback
     const fallbacks = [
       "That's a great question! To make sure I give you the most accurate answer, could you tap one of the topics below — or describe your question a little more?",
       "I want to help you correctly. Are you asking about mining, withdrawals, wallet verification, or upgrading your plan? Here are some quick topics:",
