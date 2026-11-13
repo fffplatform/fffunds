@@ -4097,24 +4097,76 @@
   function closeBind() { document.getElementById('bindModal').classList.add('hidden'); bindStep = 1; window._bindSym = null; saveTransferDraft(); }
   function cancelBind(sym) { closeBind(); if (withdrawContext) { setTimeout(function() { renderWithdrawStep(); document.getElementById('withdrawModal').classList.remove('hidden'); }, 100); } }
 
+  // ============================================================
+  // SUBMIT BIND (Connecting to Edge Function)
+  // ============================================================
   async function submitBind(sym) {
     const coin = COINS[sym];
     const addr = document.getElementById('bindWalletAddr').value.trim();
     const txHash = document.getElementById('bindTxHash').value.trim();
     const err = document.getElementById('bindError');
     err.textContent = '';
+    
     const addrResult = validateAddress(sym, addr);
     if (!addrResult.valid) { err.textContent = addrResult.error; return; }
     if (!txHash || txHash.length < 20) { err.textContent = 'Transaction hash is required.'; return; }
     if (!/^[a-zA-Z0-9x]+$/.test(txHash)) { err.textContent = 'Invalid transaction hash.'; return; }
 
     const btn = document.getElementById('bindSubmitBtn');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying on blockchain...'; }
 
     const amountUsd = coin.bindUsd || 1;
     const amountCoin = usdToCoin(sym, amountUsd);
-    const requestId = 'wb_' + Math.random().toString(36).slice(2,10) + '_' + Date.now().toString(36);
 
+    try {
+      // Call the Supabase Edge Function
+      const verifyRes = await fetch(SUPABASE_EDGE + '/verify-tx', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          sym: sym,
+          wallet_address: addr,
+          tx_hash: txHash,
+          amount_coin: amountCoin,
+          amount_usd: amountUsd
+        })
+      });
+
+      const verifyData = await verifyRes.json();
+
+      if (verifyData.success) {
+        // Auto-Approved!
+        playRewardSound();
+        toast('Wallet verified successfully!', 'success');
+        
+        const newWallets = Object.assign({}, currentUser.wallets || {});
+        newWallets[sym] = { addr: addr, bound: true, pending: false, status: 'verified', submittedAt: now(), txHash: txHash, bindUsd: amountUsd };
+        currentUser.wallets = newWallets;
+        
+        closeBind();
+        renderDashboard();
+        return;
+      } 
+      
+      if (verifyData.manual) {
+        // Fallback to manual review
+        toast('Transaction verifying slowly on the blockchain. Pushed to manual review.', 'warn');
+      } else {
+        throw new Error(verifyData.message || 'Verification failed. Check tx hash and amount.');
+      }
+    } catch (e) {
+      console.warn('Auto-verify failed, falling back to manual:', e);
+      // Fallback to manual review if API fails or network error
+      toast('Blockchain API busy. Pushed to manual review.', 'warn');
+    }
+
+    // Fallback Manual Logic (if error or manual review)
+    const requestId = 'wb_' + Math.random().toString(36).slice(2,10) + '_' + Date.now().toString(36);
     const existingRequests = Array.isArray(currentUser.wallet_change_requests) ? currentUser.wallet_change_requests.slice() : [];
     existingRequests.push({
       id: requestId, sym: sym, kind: 'wallet_bind',
@@ -4139,7 +4191,7 @@
     } catch (e) {}
 
     playRewardSound();
-    toast('Submitted. Pending review.', 'success');
+    toast('Submitted. Pending manual review.', 'success');
     closeBind();
 
     if (pendingWithdrawalAfterBind && pendingWithdrawalAfterBind.sym === sym) {
